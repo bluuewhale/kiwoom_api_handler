@@ -1,0 +1,10 @@
+finance-datareader
+pyqt5
+pyqt5-tools
+requests
+bs4
+asyncio
+numpy
+pandas
+lxml
+pymysql

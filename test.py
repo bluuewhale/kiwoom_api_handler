@@ -1,3 +1,4 @@
+from datetime import datetime as dt
 import sys
 
 import pandas as pd
@@ -5,18 +6,17 @@ from PyQt5.QtWidgets import QApplication
 
 from executor import Executor
 from feeder import Feeder
-from broker import *
+from api import *
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     pd.options.mode.chained_assignment = None
 
     # 접속
     app = QApplication(sys.argv)
 
     # API 로그인
-    stratID = 'A011010001'
+    stratID = "A011010001"
 
     broker = Kiwoom(stratID)
     broker.commConnect()
@@ -24,8 +24,10 @@ if __name__ == '__main__':
     feeder = Feeder(broker)
 
     accntNum = feeder.getAccountNum()
-    date = datetime.now().strftime("%Y%m%d")
+    today = dt.now().strftime("%Y%m%d")
     code = "005930"
 
-    #print(feeder.getOpt10059(date, code))
-    print(feeder.getOpw00001(accntNum))
+    # print(feeder.getOpt10004(code))
+    # print(feeder.getOpt10005(code))
+    print(feeder.getOpt10059(today, code))
+    # print(feeder.getOpw00001(accntNum))

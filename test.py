@@ -4,8 +4,6 @@ import sys
 import pandas as pd
 from PyQt5.QtWidgets import QApplication
 
-from executor import Executor
-from feeder import Feeder
 from api import *
 
 
@@ -21,13 +19,18 @@ if __name__ == "__main__":
     broker = Kiwoom(stratID)
     broker.commConnect()
 
-    feeder = Feeder(broker)
+    feeder = DataFeeder(broker)
 
-    accntNum = feeder.getAccountNum()
+    accNo = feeder.getAccNo()
     today = dt.now().strftime("%Y%m%d")
     code = "005930"
 
-    # print(feeder.getOpt10004(code))
-    # print(feeder.getOpt10005(code))
-    print(feeder.getOpt10059(today, code))
-    # print(feeder.getOpw00001(accntNum))
+    print(feeder.getOPT10004(code))
+    print(feeder.getOPT10005(code))
+    print(feeder.getOPT10059(today, code))
+    print(feeder.getOPT10074(accNo, "20200101", today))
+    print(feeder.getOPT10075(accNo))
+    print(feeder.getOPTKWFID(["005930", "006630"]))
+    print(feeder.getOPW00001(accNo))
+    print(feeder.getOPW00004(accNo))
+    print(feeder.getOPW00007(today, accNo))

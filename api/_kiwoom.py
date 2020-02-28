@@ -33,8 +33,8 @@ class Kiwoom(QAxWidget):
         # 서버구분
         self.serverStatus = None
 
-        # 조회구분
-        self.inquiry = 0
+        # 연속조회구분
+        self.isNext = 0
 
         # logging 클래스
         self.__initLogger()
@@ -157,12 +157,14 @@ class Kiwoom(QAxWidget):
         rqName: str - TR 요청명(commRqData() 메소드 호출시 사용된 rqName)
         trCode: str
         recordName: str
-        inquiry: str - 조회('0': 남은 데이터 없음, '2': 남은 데이터 있음)
+        inquiry: str - 조회("0" or "": 남은 데이터 없음, '2': 남은 데이터 있음)
         """
 
-        orderNo = self.getCommData(trCode, "", 0, "주문번호")
+        self.isNext = 0 if ((inquiry == "0") or (inquiry == "")) else 2  # 추가조회 여부
 
         # logging
+        orderNo = self.getCommData(trCode, "", 0, "주문번호")
+
         self.logger.debug("=" * 70)
         self.logger.debug("{")
         self.logger.debug('"TIME" : "{}",'.format(dt.now()))
@@ -174,10 +176,7 @@ class Kiwoom(QAxWidget):
         self.logger.debug("}")
         self.logger.debug("=" * 70)
 
-        # 추가조회 여부
-        self.inquiry = inquiry
-
-        # 주문 이벤트인 경우, 주문 loop에서 나옴
+        # 주문 이벤트인 경우, loop에서 나옴
         try:
             self.orderLoop.exit()
         except AttributeError:
@@ -185,40 +184,40 @@ class Kiwoom(QAxWidget):
 
         try:
 
-            # opt10004 : 주식호가요청
-            if trCode == "opt10004":
+            # OPT10004 : 주식호가요청
+            if trCode == "OPT10004":
 
-                self.opt10004 = {}
-                keyList = TrKeyList.opt10004["멀티데이터"]
+                self.OPT10004 = {}
+                keyList = TrKeyList.OPT10004["멀티데이터"]
 
                 for key in keyList:
 
                     value = self.getCommData(trCode, "주식호가요청", 0, key)
-                    self.opt10004[key] = value
+                    self.OPT10004[key] = value
 
-            # opt10005 : 주식일주월시분요청
-            elif trCode == "opt10005":
+            # OPT10005 : 주식일주월시분요청
+            elif trCode == "OPT10005":
 
-                opt10005 = defaultdict(lambda: [])
+                OPT10005 = defaultdict(lambda: [])
 
                 n = self.getRepeatCnt(trCode, rqName)
-                keyList = TrKeyList.opt10005["멀티데이터"]
+                keyList = TrKeyList.OPT10005["멀티데이터"]
 
                 for i in range(n):
                     for key in keyList:
 
                         value = self.getCommData(trCode, "주식일주월시분요청", i, key)
-                        opt10005[key].append(value)
+                        OPT10005[key].append(value)
 
-                self.opt10005 = pd.DataFrame(opt10005, columns=keyList, dtype=object)
+                self.OPT10005 = pd.DataFrame(OPT10005, columns=keyList, dtype=object)
 
-            # opt10059 : 종목별투자자기관별요청
-            elif trCode == "opt10059":
+            # OPT10059 : 종목별투자자기관별요청
+            elif trCode == "OPT10059":
 
-                opt10059 = defaultdict(lambda: [])
+                OPT10059 = defaultdict(lambda: [])
 
                 n = self.getRepeatCnt(trCode, rqName)
-                keyList = TrKeyList.opt10059["멀티데이터"]
+                keyList = TrKeyList.OPT10059["멀티데이터"]
 
                 for i in range(n):
                     for key in keyList:
@@ -227,9 +226,51 @@ class Kiwoom(QAxWidget):
                             trCode, "종목별투자자기관별요청", i, key
                         )  # 중첩 리스트
 
-                        opt10059[key].append(value)
+                        OPT10059[key].append(value)
 
-                self.opt10059 = pd.DataFrame(opt10059, columns=keyList, dtype=object)
+                self.OPT10059 = pd.DataFrame(OPT10059, columns=keyList, dtype=object)
+
+            # OPT10074 : 일자별실현손익요청
+            elif trCode == "OPT10074":
+
+                self.OPT10074 = {"acc": {}, "stocks": {}}
+
+                # 싱글데이터 : 계좌 총합
+                keyList = TrKeyList.OPT10074["싱글데이터"]
+
+                for key in keyList:
+
+                    value = self.getCommData(trCode, rqName, 0, key)
+                    self.OPT10074["acc"][key] = value
+
+                # 멀티데이터: 개별 종목
+                cnt = self.getRepeatCnt(trCode, rqName)
+                keyList = TrKeyList.OPT10074["멀티데이터"]
+
+                for i in range(cnt):
+                    for key in keyList:
+
+                        value = self.getCommData(trCode, rqName, i, key)
+                        self.OPT10074["stocks"][key] = value
+
+            # OPT10075 : 실시간미체결요청
+            elif trCode == "OPT10075":
+
+                self.OPT10075 = []
+
+                cnt = self.getRepeatCnt(trCode, rqName)
+                keyList = TrKeyList.OPT10075["멀티데이터"]
+
+                for i in range(cnt):
+
+                    tmpDict = {}
+
+                    for key in keyList:
+
+                        value = self.getCommData(trCode, rqName, i, key)
+                        tmpDict[key] = value
+
+                    self.OPT10075.append(tmpDict)
 
             # OPTKWFID : 관심종목정보요청
             if trCode == "OPTKWFID":
@@ -241,16 +282,16 @@ class Kiwoom(QAxWidget):
                     self.OPTKWFID, columns=keyList, dtype=object
                 )
 
-            # opw00001 : 예수금상세현황요청
-            elif trCode == "opw00001":
+            # OPW00001 : 예수금상세현황요청
+            elif trCode == "OPW00001":
 
-                self.opw00001 = {}
-                keyList = TrKeyList.opw00001["싱글데이터"]
+                self.OPW00001 = {}
+                keyList = TrKeyList.OPW00001["싱글데이터"]
 
                 for key in keyList:
 
                     value = self.getCommData(trCode, rqName, 0, key)
-                    self.opw00001[key] = value
+                    self.OPW00001[key] = value
 
             # OPW00004 : 계좌평가현황요청
             elif trCode == "OPW00004":
@@ -277,7 +318,7 @@ class Kiwoom(QAxWidget):
                         value = self.getCommData(trCode, rqName, i, key)
                         stockInfoDict[key] = value
 
-                    self.opw00004Data["stocks"].append(stockInfoDict)
+                    self.OPW00004["stocks"].append(stockInfoDict)
 
             # OPW00007 : 계좌별주문체결내역상세요청
             elif trCode == "OPW00007":
@@ -295,49 +336,7 @@ class Kiwoom(QAxWidget):
                         value = self.getCommData(trCode, rqName, i, key)
                         tmpDict[key] = value
 
-                    self.opw00007Data.append(tmpDict)
-
-            # opt10074 : 일자별실현손익요청
-            elif trCode == "opt10074":
-
-                self.opt10074 = {"acc": {}, "stocks": {}}
-
-                # 싱글데이터 : 계좌 총합
-                keyList = TrKeyList.opt10074["싱글데이터"]
-
-                for key in keyList:
-
-                    value = self.getCommData(trCode, rqName, i, key)
-                    self.opt10074["acc"][key] = value
-
-                # 멀티데이터: 개별 종목
-                cnt = self.getRepeatCnt(trCode, rqName)
-                keyList = TrKeyList.opt10074["멀티데이터"]
-
-                for i in range(cnt):
-                    for key in keyList:
-
-                        value = self.getCommData(trCode, rqName, i, key)
-                        self.opt10074Data["stocks"][key] = value
-
-            # opt10075 : 실시간미체결요청
-            elif trCode == "opt10075":
-
-                self.opt10075 = []
-
-                cnt = self.getRepeatCnt(trCode, rqName)
-                keyList = TrKeyList.opt10075["멀티데이터"]
-
-                for i in range(cnt):
-
-                    tmpDict = {}
-
-                    for key in keyList:
-
-                        value = self.getCommData(trCode, rqName, i, key)
-                        tmpDict[key] = value
-
-                    self.opt10075.append(tmpDict)
+                    self.OPW00007.append(tmpDict)
 
         # error 발생시 logging
         except Exception as e:
@@ -696,7 +695,7 @@ class Kiwoom(QAxWidget):
             raise KiwoomConnectError()
 
         if not (
-            isinstance(codes, str)
+            isinstance(arrCode, str)
             and isinstance(next, int)
             and isinstance(codeCount, int)
             and isinstance(rqName, str)
@@ -711,7 +710,7 @@ class Kiwoom(QAxWidget):
 
         returnCode = self.dynamicCall(
             "CommKwRqData(QString, QBoolean, int, int, QString, QString)",
-            codes,
+            arrCode,
             next,
             codeCount,
             typeFlag,
@@ -1002,13 +1001,13 @@ class APIDelayCheck:
         """
         TR 1초 5회 제한을 피하기 위해, 조회 요청을 지연합니다.
         """
-        time.sleep(0.15)  # 기본적으로 요청 간에는 0.15초 delay
+        time.sleep(0.1)  # 기본적으로 요청 간에는 0.1초 delay
 
         if len(self.rqHistory) < 5:
             pass
         else:
             # 1초 delay (5회)
-            oneSecRqTime = self.rqHistory[-5]
+            oneSecRqTime = self.rqHistory[-4]
 
             # 1초 이내에 5번 요청하면 delay
             while True:
@@ -1187,7 +1186,7 @@ class TrKeyList(object):
         ]
     }
 
-    opt10004 = {
+    OPT10004 = {
         "멀티데이터": [
             # 매도호가 관련
             "매도최우선호가",
@@ -1264,7 +1263,7 @@ class TrKeyList(object):
         ]
     }
 
-    opt10005 = {
+    OPT10005 = {
         "멀티데이터": [
             "날짜",
             "시가",
@@ -1287,7 +1286,7 @@ class TrKeyList(object):
         ]
     }
 
-    opt10059 = {
+    OPT10059 = {
         "멀티데이터": [
             "일자",
             "현재가",
@@ -1311,11 +1310,11 @@ class TrKeyList(object):
             "내외국인",
         ]
     }
-    opt10074 = {
+    OPT10074 = {
         "싱글데이터": ["총매수금액", "총매도금액", "실현손익", "매매수수료", "매매세금"],
         "멀티데이터": ["일자", "매수금액", "매도금액", "당일매도손익", "당일매매수수료", "당일매매세금"],
     }
-    opt10075 = {
+    OPT10075 = {
         "멀티데이터": [
             "계좌번호",
             "주문번호",
@@ -1345,7 +1344,7 @@ class TrKeyList(object):
             "개인투자자",
         ]
     }
-    opw00001 = {
+    OPW00001 = {
         "싱글데이터": [
             "예수금",
             "주식증거금현금",

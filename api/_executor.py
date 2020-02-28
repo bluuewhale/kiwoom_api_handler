@@ -1,11 +1,9 @@
-
-
 class Executor:
     def __init__(self, broker):
         self.broker = broker
 
     def _sendOrder(self, orderDictList):
-        '''
+        """
         API(broker)를 통해 주문을 제출하는 메서드
 
         params
@@ -24,7 +22,7 @@ class Executor:
             'hogaType' : str
             'originOrderNum' : str,
         }
-        '''
+        """
 
         if isinstance(orderDictList, list):
             for orderDict in orderDictList:

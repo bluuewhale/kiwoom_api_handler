@@ -334,10 +334,9 @@ class DataFeeder:
         self.__OPW00004(accNo, pswd)
         OPW00004 = self.kiwoom.OPW00004
 
-        # 종목코드에서 A제거
-        for dict in OPW00004["stocks"]:
-
-            dict["종목코드"] = dict["종목코드"].replace("A", "")
+        OPW00004["multi"]["종목코드"] = list(
+            map(lambda x: x.replace("A", ""), OPW00004["multi"]["종목코드"])
+        )  # 종목코드에서 A 제거
 
         return OPW00004
 

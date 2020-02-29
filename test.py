@@ -20,6 +20,7 @@ if __name__ == "__main__":
     broker.commConnect()
 
     feeder = DataFeeder(broker)
+    executor = Executor(broker)
 
     accNo = feeder.getAccNo()
     today = dt.now().strftime("%Y%m%d")
@@ -34,3 +35,17 @@ if __name__ == "__main__":
     print(feeder.getOPW00001(accNo))
     print(feeder.getOPW00004(accNo))
     print(feeder.getOPW00007(today, accNo))
+
+    orderSpecDict = executor.createOrderSpec(
+        rqName="test",
+        scrNo="0000",
+        accNo=accNo,
+        orderType=1,  # 신규매수
+        code=code,
+        qty=1,
+        price=0,
+        hogaType="03",
+        originOrderNo="",
+    )
+
+    # executor.sendOrder(orderSpecDict)

@@ -15,13 +15,13 @@ from ._logger import *
 
 
 class Kiwoom(QAxWidget):
-    def __init__(self, stratID=""):
+    def __init__(self):
         super().__init__()
 
         self.setControl("KHOPENAPI.KHOpenAPICtrl.1")
 
         # 전략코드
-        self.stratID = stratID
+        self.stratID = ""
 
         # Loop 변수
         # 비동기 방식으로 동작되는 이벤트를 동기화(순서대로 동작) 시킬 때
@@ -766,7 +766,7 @@ class Kiwoom(QAxWidget):
         rqName: string - 주문 요청명(사용자 정의)
         scrNo: string - 화면번호(4자리)
         accNo: string - 계좌번호(10자리)
-        orderType: int -
+        orderType: int
             주문유형(1: 신규매수, 2: 신규매도, 3: 매수취소, 4: 매도취소,
             5: 매수정정, 6: 매도정정)
         code: string - 종목코드
@@ -782,9 +782,14 @@ class Kiwoom(QAxWidget):
             최유리FOK, 장전시간외, 장후시간외 주문시 주문가격을 입력하지 않습니다.
         """
 
+        # server connection check
         if not self.getConnectState():
             raise KiwoomConnectError()
 
+        # API 제한 확인
+        self.orderDelayCheck.checkDelay()
+
+        # parameter type check
         if not (
             isinstance(rqName, str)
             and isinstance(scrNo, str)
@@ -796,11 +801,16 @@ class Kiwoom(QAxWidget):
             and isinstance(hogaType, str)
             and isinstance(originOrderNo, str)
         ):
-
             raise ParameterTypeError()
 
-        # API제한 확인
-        self.orderDelayCheck.checkDelay()
+        # parameter value check
+        try:
+            orderType = OrderType.TYPE[orderType]
+        except KeyError:
+            errMsg = "orderType must be in [1, 2, 3, 4, 5, 6], but got {}".format(
+                orderType
+            )
+            raise ParameterValueError(errMsg)
 
         returnCode = self.dynamicCall(
             "SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
@@ -817,13 +827,17 @@ class Kiwoom(QAxWidget):
             ],
         )
 
-        # return status Logging
-        msg = ReturnCode.CAUSE[returnCode]
-        orderType = OrderType.TYPE[orderType]
+        # returnCode check
+        try:
+            returnMsg = ReturnCode.CAUSE[returnCode]
+        except KeyError:
+            errMsg = "received an unexpected return code: {}".format(returnMsg)
+            raise KiwoomProcessingError(errMsg)
 
         if returnCode != ReturnCode.OP_ERR_NONE:
-            self.logger.error("{} sendOrder(): {}".format(dt.now(), msg))
-            raise KiwoomProcessingError("{} sendOrder(): {}".format(dt.now(), msg))
+            raise KiwoomProcessingError(
+                "received error msg from server: {}".format(returnMsg)
+            )
 
         self.logger.info(
             "{} sendOrder() : Code:{}, Price:{}, Qty:{}, orderType={}".format(
@@ -854,132 +868,6 @@ class Kiwoom(QAxWidget):
 
         data = self.dynamicCall('GetChejanData("{}")'.format(fid))
         return data
-
-    ###############################################################
-    ###################### 기타 메서드 정의  #######################
-    ###############################################################
-
-    def getCodeListByMarket(self, market):
-        """시장 구분에 따른 종목코드의 목록을 List로 반환한다.
-
-        market에 올 수 있는 값은 아래와 같다.
-        {
-         '0': 장내,
-         '3': ELW,
-         '4': 뮤추얼펀드,
-         '5': 신주인수권,
-         '6': 리츠,
-         '8': ETF,
-         '9': 하이일드펀드,
-         '10': 코스닥,
-         '30': 제3시장
-        }
-
-        params
-        =========================================================
-        market: string
-
-        return
-        =========================================================
-        codeList: list -  조회한 시장에 소속된 종목 코드를 담은 list
-        """
-
-        if not self.getConnectState():
-            raise KiwoomConnectError()
-
-        if not isinstance(market, str):
-            raise ParameterTypeError()
-
-        if market not in ["0", "3", "4", "5", "6", "8", "9", "10", "30"]:
-            raise ParameterValueError()
-
-        codes = self.dynamicCall('GetCodeListByMarket("{}")'.format(market))
-        return codes.split(";")
-
-    def getCodeList(self, *market):
-        """
-        여러 시장의 종목코드를 List 형태로 반환하는 헬퍼 메서드.
-
-        params
-        ===========================================================
-        market: Tuple - 여러 개의 문자열을 매개변수로 받아 Tuple로 처리한다.
-
-        return
-        =========================================================
-        codeList: list -  조회한 시장에 소속된 종목 코드를 담은 list
-        """
-
-        codeList = []
-
-        for m in market:
-            tempList = self.getCodeListByMarket(m)
-            codeList += tempList
-
-        return codeList
-
-    def getMasterCodeName(self, code):
-        """
-        종목코드의 한글명을 반환한다.
-
-        params
-        ==============================================
-        code: string - 종목코드
-
-        return
-        ==============================================
-        name: string - 종목코드의 한글명
-        """
-
-        if not self.getConnectState():
-            raise KiwoomConnectError()
-
-        if not isinstance(code, str):
-            raise ParameterTypeError()
-
-        name = self.dynamicCall('GetMasterCodeName("{}")'.format(code))
-        return name
-
-    def getMasterStockState(self, code):
-        """
-        종목코드의 현재 상태를 반환한다.
-
-        params
-        ==============================================
-        code: str
-
-        return
-        =============================================
-        stateList: list,  증거금비율, 종목상태(관리종목, 거래정지 등..)
-        """
-
-        if not isinstance(code, str):
-            raise ParameterTypeError()
-
-        stateList = self.dynamicCall("GetMasterStockState(QString)", code).split("|")
-        return stateList
-
-    def changeFormat(self, data, percent=0):
-        """
-        data의 format을 변환하는 함수입니다.
-
-        params
-        =======================================
-        data: str
-        percent: int,  0(정수), 1()
-        """
-        if percent == 0:
-            d = int(data)
-            formatData = "{:-,d}".format(d)
-
-        elif percent == 1:
-            f = int(data) / 100
-            formatData = "{:-,.2f}".format(f)
-
-        elif percent == 2:
-            f = float(data)
-            formatData = "{:-,.2f}".format(f)
-
-        return formatData
 
 
 class APIDelayCheck:

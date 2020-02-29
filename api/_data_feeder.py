@@ -7,15 +7,22 @@ from ._errors import *
 
 
 class DataFeeder:
-    def __init__(self, broker):
+    """
+    Data 수신과 관련된 class 입니다. Kiwoom 인스턴스(instance)를 생성자의 매개변수로 받습니다.
 
-        self.broker = broker
+    TR과 관련된 자세한 사항은 [키움증권 공식 API 개발
+    문서](https://download.kiwoom.com/web/openapi/kiwoom_openapi_plus_devguide_ver_1.5.pdf) 혹은 KOA StudioSA를 참조하시길 바랍니다.
+    """
+
+    def __init__(self, kiwoom):
+
+        self.kiwoom = kiwoom
         self.accNo = self.getAccNo()
 
         # 각 시장에 상장된 종목 코드
-        self.kspCodeList = self.broker.getCodeListByMarket("0")
-        self.kdqCodeList = self.broker.getCodeListByMarket("10")
-        self.etfCodeList = self.broker.getCodeListByMarket("8")
+        self.kspCodeList = self.getCodeListByMarket("0")
+        self.kdqCodeList = self.getCodeListByMarket("10")
+        self.etfCodeList = self.getCodeListByMarket("8")
 
     ###############################################################
     ############## TR,주문 및 잔고 관련 헬퍼 메서드   ###############
@@ -26,8 +33,8 @@ class DataFeeder:
         if not isinstance(code, str):
             raise ParameterTypeError()
 
-        self.broker.setInputValue("종목코드", code)
-        self.broker.commRqData("주식호가요청", "OPT10004", 0, "2000")
+        self.kiwoom.setInputValue("종목코드", code)
+        self.kiwoom.commRqData("주식호가요청", "OPT10004", 0, "2000")
 
     def getOPT10004(self, code):
         """ 주식호가요청 : OPT10004
@@ -44,7 +51,7 @@ class DataFeeder:
 
         self.__OPT10004(code)
 
-        OPT10004 = self.broker.OPT10004
+        OPT10004 = self.kiwoom.OPT10004
         return OPT10004
 
     def __OPT10005(self, code):
@@ -52,8 +59,8 @@ class DataFeeder:
         if not isinstance(code, str):
             raise ParameterTypeError()
 
-        self.broker.setInputValue("종목코드", code)
-        self.broker.commRqData("주식일주월시분요청", "OPT10005", 0, "2000")
+        self.kiwoom.setInputValue("종목코드", code)
+        self.kiwoom.commRqData("주식일주월시분요청", "OPT10005", 0, "2000")
 
     def getOPT10005(self, code):
         """ 주식일주월시분요청 : OPT10005
@@ -71,7 +78,7 @@ class DataFeeder:
         """
 
         self.__OPT10005(code)
-        OPT10005 = self.broker.OPT10005
+        OPT10005 = self.kiwoom.OPT10005
         return OPT10005
 
     def __OPT10059(self, date, code, gumaekGubun=1, maemaeGubun=0, danwiGubun=1):
@@ -90,12 +97,12 @@ class DataFeeder:
         if not (len(date) == 8):
             raise ParameterValueError()
 
-        self.broker.setInputValue("일자", date)
-        self.broker.setInputValue("종목코드", code)
-        self.broker.setInputValue("금액수량구분", gumaekGubun)
-        self.broker.setInputValue("매매구분", maemaeGubun)
-        self.broker.setInputValue("단위구분", danwiGubun)
-        self.broker.commRqData("종목별투자자기관별요청", "OPT10059", 0, "2000")
+        self.kiwoom.setInputValue("일자", date)
+        self.kiwoom.setInputValue("종목코드", code)
+        self.kiwoom.setInputValue("금액수량구분", gumaekGubun)
+        self.kiwoom.setInputValue("매매구분", maemaeGubun)
+        self.kiwoom.setInputValue("단위구분", danwiGubun)
+        self.kiwoom.commRqData("종목별투자자기관별요청", "OPT10059", 0, "2000")
 
     def getOPT10059(
         self, date, code, idx=None, gumaekGubun="1", maemaeGubun="0", danwiGubun="1"
@@ -118,7 +125,7 @@ class DataFeeder:
         """
 
         self.__OPT10059(date, code, gumaekGubun, maemaeGubun, danwiGubun)
-        OPT10059 = self.broker.OPT10059
+        OPT10059 = self.kiwoom.OPT10059
 
         if idx is not None:
             OPT10059 = OPT10059.loc[idx]
@@ -139,12 +146,12 @@ class DataFeeder:
 
         while True:
 
-            self.broker.setInputValue("계좌번호", accNo)
-            self.broker.setInputValue("시작일자", sdate)
-            self.broker.setInputValue("종료일자", edate)
-            self.broker.commRqData("일자별실현손익요청", "OPT10074", isNext, "1074")
+            self.kiwoom.setInputValue("계좌번호", accNo)
+            self.kiwoom.setInputValue("시작일자", sdate)
+            self.kiwoom.setInputValue("종료일자", edate)
+            self.kiwoom.commRqData("일자별실현손익요청", "OPT10074", isNext, "1074")
 
-            isNext = self.broker.isNext
+            isNext = self.kiwoom.isNext
             if not isNext:
                 break
 
@@ -162,7 +169,7 @@ class DataFeeder:
             edate = sdate
 
         self.__OPT10074(accNo, sdate, edate)
-        return self.broker.OPT10074
+        return self.kiwoom.OPT10074
 
     def __OPT10075(self, accNo, inquiry, inquiry2):
 
@@ -182,12 +189,12 @@ class DataFeeder:
 
         while True:
 
-            self.broker.setInputValue("계좌번호", accNo)
-            self.broker.setInputValue("체결구분", inquiry)
-            self.broker.setInputValue("매매구분", inquiry2)
-            self.broker.commRqData("실시간미체결요청", "OPT10075", isNext, "1075")
+            self.kiwoom.setInputValue("계좌번호", accNo)
+            self.kiwoom.setInputValue("체결구분", inquiry)
+            self.kiwoom.setInputValue("매매구분", inquiry2)
+            self.kiwoom.commRqData("실시간미체결요청", "OPT10075", isNext, "1075")
 
-            isNext = self.broker.isNext
+            isNext = self.kiwoom.isNext
             if not isNext:
                 break
 
@@ -203,7 +210,7 @@ class DataFeeder:
         """
 
         self.__OPT10075(accNo, inquiry, inquiry2)
-        return self.broker.OPT10075
+        return self.kiwoom.OPT10075
 
     def __OPTKWFID(self, codes):
 
@@ -211,13 +218,13 @@ class DataFeeder:
             raise ParameterTypeError()
 
         codesCnt = len(codes.split(";"))
-        self.broker.commKwRqData(codes, 0, codesCnt, "관심종목정보요청", "1111", typeFlag=0)
+        self.kiwoom.commKwRqData(codes, 0, codesCnt, "관심종목정보요청", "1111", typeFlag=0)
 
     def getOPTKWFID(self, codeList):
-        """  관심종목정보요청
+        """ 관심종목정보요청 : getOPTKWFID
 
         한번에 100 종목 이상까지 조회가능하도록 수정한 헬퍼 매서드입니다.
-        요청한 데이터는 self.broker.OPTKWFIDData에 저장됩니다.
+        요청한 데이터는 self.kiwoom.OPTKWFIDData에 저장됩니다.
 
         params
         =====================================
@@ -245,7 +252,7 @@ class DataFeeder:
             tmpCodes = ";".join(tmpCodeList)
 
             self.__OPTKWFID(tmpCodes)  # TR 전송
-            OPTKWFID = self.broker.OPTKWFID
+            OPTKWFID = self.kiwoom.OPTKWFID
 
             data = pd.concat((data, OPTKWFID), axis=0, copy=False)
 
@@ -261,13 +268,13 @@ class DataFeeder:
         ):
             raise ParameterTypeError()
 
-        self.broker.setInputValue("계좌번호", accNo)
-        self.broker.setInputValue("비밀번호", pswd)
-        self.broker.setInputValue("조회구분", inquiry)
-        self.broker.commRqData("예수금상세현황요청", "OPW00001", 0, "2001")
+        self.kiwoom.setInputValue("계좌번호", accNo)
+        self.kiwoom.setInputValue("비밀번호", pswd)
+        self.kiwoom.setInputValue("조회구분", inquiry)
+        self.kiwoom.commRqData("예수금상세현황요청", "OPW00001", 0, "2001")
 
     def getOPW00001(self, accNo, pswd="", inquiry="2"):
-        """예수금상세현황요청(주문가능금액)
+        """ 예수금상세현황요청 : OPW00001
         주문가능금액을 반환합니다.
 
         params
@@ -282,7 +289,7 @@ class DataFeeder:
         """
 
         self.__OPW00001(accNo, pswd, inquiry)
-        OPW00001 = self.broker.OPW00001
+        OPW00001 = self.kiwoom.OPW00001
 
         return OPW00001
 
@@ -295,16 +302,16 @@ class DataFeeder:
 
         while True:
 
-            self.broker.setInputValue("계좌번호", accNo)
-            self.broker.setInputValue("비밀번호", pswd)
-            self.broker.commRqData("계좌평가현황요청", "OPW00004", isNext, "2004")
+            self.kiwoom.setInputValue("계좌번호", accNo)
+            self.kiwoom.setInputValue("비밀번호", pswd)
+            self.kiwoom.commRqData("계좌평가현황요청", "OPW00004", isNext, "2004")
 
-            isNext = self.broker.isNext
+            isNext = self.kiwoom.isNext
             if not isNext:
                 break
 
     def getOPW00004(self, accNo, pswd=""):
-        """ 계좌평가잔고내역요청
+        """ 계좌평가잔고내역요청 : OPW00004
         계좌정보 및 보유종목 정보를 반환합니다.
 
         params
@@ -321,7 +328,7 @@ class DataFeeder:
         """
 
         self.__OPW00004(accNo, pswd)
-        OPW00004 = self.broker.OPW00004
+        OPW00004 = self.kiwoom.OPW00004
 
         # 종목코드에서 A제거
         for dict in OPW00004["stocks"]:
@@ -346,12 +353,12 @@ class DataFeeder:
 
         while True:
 
-            self.broker.setInputValue("주문일자", date)  # YYYYMMDD
-            self.broker.setInputValue("계좌번호", accNo)
-            self.broker.setInputValue("조회구분", inquiry)
-            self.broker.commRqData("계좌별주문체결내역상세요청", "OPW00007", isNext, "2007")
+            self.kiwoom.setInputValue("주문일자", date)  # YYYYMMDD
+            self.kiwoom.setInputValue("계좌번호", accNo)
+            self.kiwoom.setInputValue("조회구분", inquiry)
+            self.kiwoom.commRqData("계좌별주문체결내역상세요청", "OPW00007", isNext, "2007")
 
-            isNext = self.broker.isNext
+            isNext = self.kiwoom.isNext
             if not isNext:
                 break
 
@@ -368,14 +375,14 @@ class DataFeeder:
         """
 
         self.__OPW00007(date, accNo, inquiry)
-        return self.broker.OPW00007
+        return self.kiwoom.OPW00007
 
     ##########################################
     ########## 계좌 조회 관련 메서드 ##########
     ##########################################
 
     def getAccNo(self):
-        return self.broker.getLoginInfo("ACCNO").rstrip(";")
+        return self.kiwoom.getLoginInfo("ACCNO").rstrip(";")
 
     def getDeposit(self, accNo):
         #  계좌 정보
@@ -413,11 +420,102 @@ class DataFeeder:
     ##########################################
     ############# utility 메서드 #############
     ##########################################
+    ###############################################################
+    ###################### 기타 메서드 정의  #######################
+    ###############################################################
+
+    def getCodeListByMarket(self, market):
+        """시장 구분에 따른 종목코드의 목록을 List로 반환한다.
+
+        market에 올 수 있는 값은 아래와 같다.
+        {
+         '0': 장내,
+         '3': ELW,
+         '4': 뮤추얼펀드,
+         '5': 신주인수권,
+         '6': 리츠,
+         '8': ETF,
+         '9': 하이일드펀드,
+         '10': 코스닥,
+         '30': 제3시장
+        }
+
+        params
+        =========================================================
+        market: string
+
+        return
+        =========================================================
+        codeList: list -  조회한 시장에 소속된 종목 코드를 담은 list
+        """
+
+        if not self.kiwoom.getConnectState():
+            raise KiwoomConnectError()
+
+        if not isinstance(market, str):
+            raise ParameterTypeError()
+
+        if market not in ["0", "3", "4", "5", "6", "8", "9", "10", "30"]:
+            raise ParameterValueError()
+
+        codes = self.kiwoom.dynamicCall('GetCodeListByMarket("{}")'.format(market))
+        return codes.split(";")
+
+    def getCodeList(self, *market):
+        """
+        여러 시장의 종목코드를 List 형태로 반환하는 헬퍼 메서드.
+
+        params
+        ===========================================================
+        market: array-like or strings - {
+         '0': 장내,
+         '3': ELW,
+         '4': 뮤추얼펀드,
+         '5': 신주인수권,
+         '6': 리츠,
+         '8': ETF,
+         '9': 하이일드펀드,
+         '10': 코스닥,
+         '30': 제3시장
+        }
+.
+
+        return
+        =========================================================
+        codeList: list -  조회한 시장에 소속된 종목 코드를 담은 list
+        """
+
+        codeList = []
+
+        for m in market:
+            tempList = self.getCodeListByMarket(m)
+            codeList += tempList
+
+        return codeList
+
+    def getMasterCodeName(self, code):
+        """ 종목코드의 한글명을 반환한다.
+
+        params
+        ==============================================
+        code: string - 종목코드
+
+        return
+        ==============================================
+        name: string - 종목코드의 한글명
+        """
+
+        if not self.kiwoom.getConnectState():
+            raise KiwoomConnectError()
+
+        if not isinstance(code, str):
+            raise ParameterTypeError()
+
+        name = self.kiwoom.dynamicCall('GetMasterCodeName("{}")'.format(code))
+        return name
 
     def getMarketByCode(self, code):
-        """
-        해당 종목이 상장된 시장정보 반환
-        """
+        """ 해당 종목이 상장된 시장정보 반환 """
 
         if code in self.kspCodeList:
             return "ksp"
@@ -430,26 +528,41 @@ class DataFeeder:
 
         return None
 
-    def dropIssueStock(self, codeList):
+    def getMasterStockState(self, code):
         """
-        관리종목, 거래정지 종목을 제거합니다.
+        종목코드의 현재 상태를 반환한다.
+
+        params
+        ==============================================
+        code: str
+
+        return
+        =============================================
+        stateList: list,  증거금비율, 종목상태(관리종목, 거래정지 등..)
+        """
+
+        if not isinstance(code, str):
+            raise ParameterTypeError()
+
+        stateList = self.kiwoom.dynamicCall("GetMasterStockState(QString)", code).split(
+            "|"
+        )
+        return stateList
+
+    def checkIfIssue(self, code):
+        """ 해당 종목이 관리종목 혹은 거래정지에 해당하는지 확인하는 함수
 
         return
         =======================
-        cleanList
+        isIssue: bool - True: 관리종목 or 거래정지종목
         """
 
-        cleanList = []
+        stateList = self.kiwoom.getMasterStockState(code)
 
-        for code in codeList:
-            stateList = self.broker.getMasterStockState(code)
+        if ("관리종목" in stateList) or ("거래정지" in stateList):
+            return True
 
-            if "관리종목" in stateList or "거래정지" in stateList:
-                continue
-
-            cleanList.append(code)
-
-        return cleanList
+        return False
 
     def getCodesFromKRX(self, market="all"):
         """ 상장기업 목록 (한국거래소) """
@@ -507,14 +620,14 @@ class DataFeeder:
             "STRAT_RET_PCT": stratRt,
         }
 
-        self.broker.logger.debug("=" * 70)
-        self.broker.logger.debug("{")
+        self.kiwoom.logger.debug("=" * 70)
+        self.kiwoom.logger.debug("{")
 
         for key, val in loggingDict.items():
 
-            self.broker.logger.debug('"{}" : "{}" ,'.format(key, val))
+            self.kiwoom.logger.debug('"{}" : "{}" ,'.format(key, val))
 
-        self.broker.logger.debug("}")
-        self.broker.logger.debug("=" * 70)
+        self.kiwoom.logger.debug("}")
+        self.kiwoom.logger.debug("=" * 70)
 
         return summaryDict

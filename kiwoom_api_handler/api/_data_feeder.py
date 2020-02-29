@@ -167,6 +167,10 @@ class DataFeeder:
         accNo: str
         sdate: str - start date, YYYYMMDD
         edate: str - end date, YYYYMMDD
+
+        return
+        ==================================================
+        OPT10059: dictionary
         """
 
         if not edate:
@@ -203,18 +207,63 @@ class DataFeeder:
                 break
 
     def getOPT10075(self, accNo, inquiry="1", inquiry2="0"):
-        """
-        실시간미체결요청
+        """ OPT10075 : 실시간미체결요청
 
         params
         =======================================================
         accNo: str
         inquiry: str - 0:체결+미체결, 1:미체결, 2:체결
         inquiry2: str - 0:전체, 1:매도, 2:매수
+
+        return
+        ==================================================
+        OPT10075: pandas.DataFrame
         """
 
         self.__OPT10075(accNo, inquiry, inquiry2)
         return self.kiwoom.OPT10075
+
+    def __OPT10080(self, code, tickRange, priceGubun):
+
+        # type check
+        if not (
+            isinstance(code, str),
+            isinstance(tickRange, str),
+            isinstance(priceGubun, str),
+        ):
+
+            raise ParameterTypeError()
+
+        isNext = 0  # 최초에는 0으로 지정
+
+        while True:
+
+            self.kiwoom.setInputValue("종목코드", code)
+            self.kiwoom.setInputValue("틱범위", tickRange)
+            self.kiwoom.setInputValue("수정주가구분", priceGubun)
+            self.kiwoom.commRqData("주식분봉차트조회요청", "OPT10080", isNext, "1080")
+
+            isNext = self.kiwoom.isNext
+            if not isNext:
+                break
+
+    def getOPT10080(self, code, tickRange, priceGubun="0"):
+        """ OPT10080 : 주식분봉차트조회요청
+
+        params
+        =======================================================
+        code: str
+        tickRange: str - 1:1분, 3:3분, 5:5분, 10:10분, 15:15분, 30:30분, 45:45분, 60:60분
+        priceGubun: str - 0 or 1, 수신데이터 1:유상증자, 2:무상증자, 4:배당락, 8:액면분할,
+            16:액면병합, 32:기업합병, 64:감자, 256:권리락
+
+        return
+        ==================================================
+        OPT10080: pandas.DataFrame
+        """
+
+        self.__OPT10080(code, tickRange, priceGubun)
+        return self.kiwoom.OPT10080
 
     def __OPTKWFID(self, codes):
 
@@ -325,10 +374,7 @@ class DataFeeder:
 
         return
         =========================================================
-        OPW00018 :  Dict, {
-            'account' : 싱글데이터
-            'stocks' : 멀티데이터
-        }
+        OPW00004 :  dictionary, {'single':싱글데이터, 'multi':멀티데이터}
         """
 
         self.__OPW00004(accNo, pswd)
@@ -375,6 +421,10 @@ class DataFeeder:
         date: str - YYYYMMDD
         accNo: str
         inquiry: str - 1:주문순, 2:역순, 3:미체결, 4:체결내역만
+
+        return
+        ==================================================
+        OPW00007: dictionary
         """
 
         self.__OPW00007(date, accNo, inquiry)
@@ -385,39 +435,50 @@ class DataFeeder:
     ##########################################
 
     def getAccNo(self):
+        """ 계좌번호 반환 """
+
         return self.kiwoom.getLoginInfo("ACCNO").rstrip(";")
 
     def getDeposit(self, accNo):
-        #  계좌 정보
-        OPW00004Data = self.getOPW00004(accNo)
+        """ D+2 추정예수금 반환 """
 
-        deposit = int(OPW00004Data["account"]["D+2추정예수금"].replace(",", ""))
+        OPW00004 = self.getOPW00004(accNo)
+        deposit = int(OPW00004["single"]["D+2추정예수금"].replace(",", ""))
         return deposit
 
-    def getUnexOrderDictList(self, accNo):
+    def getUnExOrderDict(self, accNo):
+        """ 미체결 정보 반환
+
+        unExOrderDict: dictionary
+        """
+
         inquiry = "1"  # 미체결
         inquiry2 = "0"  # 매수+매도
 
-        unexOrderDictList = self.getOPT10075(accNo, inquiry, inquiry2)
-        return unexOrderDictList
+        unExOrderDict = self.getOPT10075(accNo, inquiry, inquiry2)
+        return unExOrderDict
 
     def getAccountDict(self, accNo):
-        OPW00004Data = self.getOPW00004(accNo)
+        """ 계좌 정보 """
 
-        accountDict = OPW00004Data["account"]
+        OPW00004 = self.getOPW00004(accNo)
+        accountDict = OPW00004["single"]
         return accountDict
 
-    def getInventoryDictList(self, accNo):
-        # 개별 종목 정보
-        OPW00004Data = self.getOPW00004(accNo)
+    def getInventoryDict(self, accNo):
+        """ 현재 보유중인 개별 종목 정보 """
 
-        inventoryDictList = OPW00004Data["stocks"]
+        OPW00004Data = self.getOPW00004(accNo)
+        inventoryDictList = OPW00004Data["multi"]
+
         return inventoryDictList
 
-    def getInventoryCodeList(self, accNo):
-        inventoryDictList = self.getInventoryDictList(accNo)
+    def getInventoryCodes(self, accNo):
+        """ 현재 보유중인 종목코드 반환 """
 
-        codeList = [dict["종목코드"] for dict in inventoryDictList]
+        inventoryDict = self.getInventoryDict(accNo)
+        codeList = inventoryDict["종목코드"]
+
         return codeList
 
     ##########################################

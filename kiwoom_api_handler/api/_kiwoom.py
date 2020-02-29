@@ -207,6 +207,7 @@ class Kiwoom(QAxWidget):
             elif trCode == "OPT10074":
 
                 self.OPT10074 = self.getSingleAndMultiData(trCode, rqName)
+
             # OPT10075 : 실시간미체결요청
             elif trCode == "OPT10075":
 

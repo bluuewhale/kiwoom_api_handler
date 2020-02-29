@@ -27,6 +27,9 @@ git clone git clone https://github.com/DonghyungKo/kiwoom_api_handler.git
  # 1. 관리자 권한으로 Anaconda Prompt를 실행
  set CONDA_FORCE_32BIT=1
  conda create -n py36_32 python=3.6 anaconda
+
+# 설치 후
+ conda activate py36_32
  ```
 
 **2. 필수 패키지 설치**
@@ -52,13 +55,12 @@ Data 수신과 관련된 기능을 담당하는 class 입니다. **생성자의 
 TR과 관련된 자세한 사항은 [키움증권 공식 OPEN API+ 개발
 문서](https://download.kiwoom.com/web/openapi/kiwoom_openapi_plus_devguide_ver_1.5.pdf) 혹은 KOA StudioSA를 참조하시길 바랍니다.
 
-
-
  - `OPT10004 : 주식호가요청`
  - `OPT10005 : 주식일주월시분요청`
  - `OPT10059 : 종목별투자자기관별요청`
  - `OPT10074 : 일자별실현손익요청`
  - `OPT10075 : 실시간미체결요청`
+ - `OPT10080 : 주식분봉차트조회요청`
  - `OPTKWFID : 관심종목정보요청`
  - `OPW00001 : 예수금상세현황요청`
  - `OPW00004 : 계좌평가잔고내역요청`

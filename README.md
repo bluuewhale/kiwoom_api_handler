@@ -25,7 +25,7 @@ git clone git clone https://github.com/DonghyungKo/kiwoom_api_handler.git
  ``` sh
  # Anaconda Prompt에서 32bit 가상환경을 생성하는 방법
  # 1. 관리자 권한으로 Anaconda Prompt를 실행
- set CONDA_FORCE_32BIT = 1
+ set CONDA_FORCE_32BIT=1
  conda create -n py36_32 python=3.6 anaconda
  ```
 

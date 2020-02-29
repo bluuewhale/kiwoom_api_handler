@@ -2,14 +2,14 @@ from setuptools import setup, find_packages
 
 setup(
     name="kiwoom_api_handler",
-    version="0.0.1",
+    version="0.0.3",
     description="a package for hanlding Kiwoom OPEN API+ ActiveX Control with python",
     author="Donghyung Ko",
     author_email="koko8624@gmail.com",
     license="MIT",
     url="https://github.com/donghyungko/kiwoom_api_handler.git",
     download_url="https://github.com/DonghyungKo/kiwoom_api_handler/archive/master.zip",
-    install_requires=["numpy", "pandas", "pyqt5", "pyqt5-tools", "asyncio"],
+    install_requires=["pandas==0.25.1", "PyQt5==5.14.1"],
     packages=find_packages(exclude=[]),
     keywords=["Kiwoom", "Kiwoom OPEN API+", "Kiwoom API", "키움증권"],
     python_requires=">=3.6",

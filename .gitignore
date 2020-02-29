@@ -1,7 +1,8 @@
 __pycache__
 log
 
-runner.py
+kiwoom_api_handler/runner
+
 
 # vscode
 .vscode/

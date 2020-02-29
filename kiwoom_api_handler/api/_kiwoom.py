@@ -4,13 +4,15 @@ import os
 import sys
 import time
 
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+
 import pandas as pd
 from PyQt5.QAxContainer import QAxWidget
 from PyQt5.QtCore import QEventLoop
 from PyQt5.QtWidgets import QApplication
 
-from ._utility import *
-from ._errors import *
+from utility import *
+from _errors import *
 from ._logger import *
 
 

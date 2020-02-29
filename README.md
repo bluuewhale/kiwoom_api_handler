@@ -2,8 +2,23 @@
 키움증권 Open API+ ActiveX Control을 Python에서 사용할 수 있도록 만든 package입니다.
 
 ---
+### Installation
+
+``` sh
+# easy install with pip
+pip install kiwoom_api_handler
+```
+
+or
+
+``` sh
+# You can check the latest sources with the command
+git clone git clone https://github.com/DonghyungKo/kiwoom_api_handler.git
+```
+
 ### Requirements
- - python 3.6 or higher (**32bit**)
+
+**1. python 3.6 or higher (32bit)**
   > 키움증권 OPEN API+는 32bit 환경에서만 실행 가능하므로, 기존 64bit 환경을 이용하는
   경우에는 32bit 가상환경을 생성하여야 합니다.
 
@@ -14,12 +29,12 @@
  conda create -n py36_32 python=3.6 anaconda
  ```
 
- - 필수 패키지 설치
- ```sh
- pip install -r requirements.txt
- ```
+**2. 필수 패키지 설치**
+```sh
+pip install -r requirements.txt
+```
 
- - **[Kiwoom API+ 다운로드 및 자동 로그인 설정](https://www3.kiwoom.com/nkw.templateFrameSet.do?m=m1408000000)**
+**[3. Kiwoom API+ 다운로드 및 자동 로그인 설정](https://www3.kiwoom.com/nkw.templateFrameSet.do?m=m1408000000)**
 
 ---
 
@@ -53,7 +68,7 @@ TR과 관련된 자세한 사항은 [키움증권 공식 OPEN API+ 개발
 ```python
 import sys
 from PyQt5.QtWidgets import QApplication
-from kiwoom_api_handler import Kiwoom, DataFeeder
+from kiwoom_api_handler.api import Kiwoom, DataFeeder
 
 if __name__ == "__main__":
 
@@ -81,7 +96,7 @@ if __name__ == "__main__":
 ```python
 import sys
 from PyQt5.QtWidgets import QApplication
-from kiwoom_api_handler import Kiwoom, DataFeeder, Executor
+from kiwoom_api_handler.api import Kiwoom, DataFeeder, Executor
 
 if __name__ == "__main__":
 
@@ -115,10 +130,3 @@ if __name__ == "__main__":
 Please leave an issue if you find a bug or need future supports.
 
 you can also contact koko8624@gmail.com for support and bug report.
-
-#### Source code
-You can check the latest sources with the command:
-
-```sh
-git clone https://github.com/DonghyungKo/kiwoom_api_handler.git
-```

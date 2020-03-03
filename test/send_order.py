@@ -1,9 +1,8 @@
+from PyQt5.QtWidgets import QApplication
 import os
 import sys
 
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
-
-from PyQt5.QtWidgets import QApplication
 
 from kiwoom_api_handler.api import Kiwoom, DataFeeder, Executor
 

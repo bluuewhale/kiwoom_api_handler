@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 import pandas as pd
 
 from _errors import *
+from ._kiwoom import TrKeyList
 
 
 class DataFeeder:
@@ -31,6 +32,21 @@ class DataFeeder:
     ###############################################################
     ############## TR,주문 및 잔고 관련 헬퍼 메서드   ###############
     ###############################################################
+
+    def __OPT10001(self, code):
+
+        if not isinstance(code, str):
+            raise ParameterTypeError()
+
+        self.kiwoom.setInputValue("종목코드", code)
+        self.kiwoom.commRqData("주식기본정보요청", "OPT10001", 0, "2000")
+
+    def getOPT10001(self, code):
+
+        self.__OPT10001(code)
+        OPT10001 = self.kiwoom.OPT10001
+
+        return OPT10001
 
     def __OPT10004(self, code):
 
@@ -523,7 +539,10 @@ class DataFeeder:
             raise ParameterValueError()
 
         codes = self.kiwoom.dynamicCall('GetCodeListByMarket("{}")'.format(market))
-        return codes.split(";")
+        codeList = codes.split(";")
+        codeList = [c for c in codeList if not c == ""]  # "" 제거
+
+        return codeList
 
     def getCodeList(self, *market):
         """
@@ -656,6 +675,24 @@ class DataFeeder:
 
         codeList = [c for c in codeList if not "스팩" in c]  # 스팩 제거
         return codeList
+
+    def getWantedTRs(self, keyword):
+        """ 입력받은 매개변수(keyword)에 대한 데이터를 갖고 있는 TR 목록을 반환합니다.
+
+        params
+        ===========================
+        keyword: str - 요청하고자 하는 데이터 ex)"종가", "등락률"
+        """
+        trNames = []
+
+        for trName, tmpDict in TrKeyList.TR.items():
+
+            for singleOrMulti, trList in tmpDict.items():
+
+                if keyword in trList:
+                    trNames.append(trName)
+
+        return trNames
 
     ### logging 관련 매서드
     def showTradingSummary(self, date):

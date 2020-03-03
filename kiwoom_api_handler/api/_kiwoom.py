@@ -97,8 +97,8 @@ class Kiwoom(QAxWidget):
 
         else:
 
-            errorName = ReturnCode.CAUSE[returnCode]
-            msg = "{} EVENT: Connection failed => {}".format(t, errorName)
+            e = ReturnCode.CAUSE[returnCode]
+            msg = "{} EVENT: Connection failed => {}".format(t, e)
 
             self.logger.debug("=" * 70)
             self.logger.debug(msg)
@@ -185,39 +185,43 @@ class Kiwoom(QAxWidget):
             pass
 
         try:
+            # OPT10001 : 주식기본정보요청
+            if trCode == "OPT10001":
+
+                self.OPT10001 = self._getSingleData(trCode, rqName)
 
             # OPT10004 : 주식호가요청
-            if trCode == "OPT10004":
+            elif trCode == "OPT10004":
 
-                self.OPT10004 = self.getMultiData(trCode, rqName)
+                self.OPT10004 = self._getMultiData(trCode, rqName)
 
             # OPT10005 : 주식일주월시분요청
             elif trCode == "OPT10005":
 
-                data = self.getMultiData(trCode, rqName)
+                data = self._getMultiData(trCode, rqName)
                 self.OPT10005 = pd.DataFrame(data, dtype=object)
 
             # OPT10059 : 종목별투자자기관별요청
             elif trCode == "OPT10059":
 
-                data = self.getMultiData(trCode, rqName)
+                data = self._getMultiData(trCode, rqName)
                 self.OPT10059 = pd.DataFrame(data, dtype=object)
 
             # OPT10074 : 일자별실현손익요청
             elif trCode == "OPT10074":
 
-                self.OPT10074 = self.getSingleAndMultiData(trCode, rqName)
+                self.OPT10074 = self._getSingleAndMultiData(trCode, rqName)
 
             # OPT10075 : 실시간미체결요청
             elif trCode == "OPT10075":
 
-                data = self.getMultiData(trCode, rqName)
+                data = self._getMultiData(trCode, rqName)
                 self.OPT10075 = pd.DataFrame(data, dtype=object)
 
             # OPT10080 : 주식분봉차트조회요청
             elif trCode == "OPT10080":
 
-                data = self.getMultiData(trCode, rqName)
+                data = self._getMultiData(trCode, rqName)
                 self.OPT10080 = pd.DataFrame(data, dtype=object)
 
             # OPTKWFID : 관심종목정보요청
@@ -231,17 +235,17 @@ class Kiwoom(QAxWidget):
             # OPW00001 : 예수금상세현황요청
             elif trCode == "OPW00001":
 
-                self.OPW00001 = self.getSingleData(trCode, rqName)
+                self.OPW00001 = self._getSingleData(trCode, rqName)
 
             # OPW00004 : 계좌평가현황요청
             elif trCode == "OPW00004":
 
-                self.OPW00004 = self.getSingleAndMultiData(trCode, rqName)
+                self.OPW00004 = self._getSingleAndMultiData(trCode, rqName)
 
             # OPW00007 : 계좌별주문체결내역상세요청
             elif trCode == "OPW00007":
 
-                self.OPW00007 = self.getMultiData(trCode, rqName)
+                self.OPW00007 = self._getMultiData(trCode, rqName)
 
         # error 발생시 logging
         except Exception as e:
@@ -771,7 +775,7 @@ class Kiwoom(QAxWidget):
         data = self.dynamicCall('GetChejanData("{}")'.format(fid))
         return data
 
-    def getSingleData(self, trCode, rqName):
+    def _getSingleData(self, trCode, rqName):
         """ TR 수신 이벤트시 실행 시에 싱글데이터를 수신받는 매서드
 
         OnEventReceiveData에서 호출
@@ -793,7 +797,7 @@ class Kiwoom(QAxWidget):
 
         return returnDict
 
-    def getMultiData(self, trCode, rqName):
+    def _getMultiData(self, trCode, rqName):
         """ TR 수신 이벤트시 실행 시에 멀티데이터를 수신받는 매서드
 
         OnEventReceiveData에서 호출
@@ -821,11 +825,11 @@ class Kiwoom(QAxWidget):
 
         return returnDict
 
-    def getSingleAndMultiData(self, trCode, rqName):
+    def _getSingleAndMultiData(self, trCode, rqName):
 
         returnDict = {"single": {}, "multi": {}}
-        returnDict["single"] = self.getSingleData(trCode, rqName)
-        returnDict["multi"] = self.getMultiData(trCode, rqName)
+        returnDict["single"] = self._getSingleData(trCode, rqName)
+        returnDict["multi"] = self._getMultiData(trCode, rqName)
         return returnDict
 
 
@@ -848,7 +852,7 @@ class APIDelayCheck:
         """
         TR 1초 5회 제한을 피하기 위해, 조회 요청을 지연합니다.
         """
-        time.sleep(0.1)  # 기본적으로 요청 간에는 0.1초 delay
+        time.sleep(0.15)  # 기본적으로 요청 간에는 0.1초 delay
 
         if len(self.rqHistory) < 5:
             pass
@@ -856,10 +860,10 @@ class APIDelayCheck:
             # 1초 delay (5회)
             oneSecRqTime = self.rqHistory[-4]
 
-            # 1초 이내에 5번 요청하면 delay
+            # 1.1초 이내에 5번 요청하면 delay
             while True:
                 RqInterval = time.time() - oneSecRqTime
-                if RqInterval > 1:
+                if RqInterval > 1.1:
                     break
 
         # 1hour delay (1000회)
@@ -966,6 +970,55 @@ class ReturnCode(object):
 class TrKeyList(object):
 
     TR = {
+        "OPT10001": {
+            "싱글데이터": [
+                "종목코드",
+                "종목명",
+                "결산월",
+                "액면가",
+                "자본금",
+                "상장주식",
+                "신용비율",
+                "연중최고",
+                "연중최저",
+                "시가총액",
+                "시가총액비중",
+                "외인소진률",
+                "대용가",
+                "PER",
+                "EPS",
+                "ROE",
+                "PBR",
+                "EV",
+                "BPS",
+                "매출액",
+                "영업이익",
+                "당기순이익",
+                "250최고",
+                "250최저",
+                "시가",
+                "고가",
+                "저가",
+                "상한가",
+                "하한가",
+                "기준가",
+                "예상체결가",
+                "예상체결수량",
+                "250최고가일",
+                "250최고가대비율",
+                "250최저가일",
+                "250최저가대비율",
+                "현재가",
+                "대비기호",
+                "전일대비",
+                "등략율",
+                "거래량",
+                "거래대비",
+                "액면가단위",
+                "유통주식",
+                "유통비율",
+            ]
+        },
         "OPT10004": {
             "멀티데이터": [
                 # 매도호가 관련

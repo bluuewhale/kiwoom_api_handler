@@ -250,18 +250,10 @@ class DataFeeder:
 
             raise ParameterTypeError()
 
-        isNext = 0  # 최초에는 0으로 지정
-
-        while True:
-
-            self.kiwoom.setInputValue("종목코드", code)
-            self.kiwoom.setInputValue("틱범위", tickRange)
-            self.kiwoom.setInputValue("수정주가구분", priceGubun)
-            self.kiwoom.commRqData("주식분봉차트조회요청", "OPT10080", isNext, "1080")
-
-            isNext = self.kiwoom.isNext
-            if not isNext:
-                break
+        self.kiwoom.setInputValue("종목코드", code)
+        self.kiwoom.setInputValue("틱범위", tickRange)
+        self.kiwoom.setInputValue("수정주가구분", priceGubun)
+        self.kiwoom.commRqData("주식분봉차트조회요청", "OPT10080", 0, "1080")
 
     def getOPT10080(self, code, tickRange, priceGubun="0"):
         """ OPT10080 : 주식분봉차트조회요청

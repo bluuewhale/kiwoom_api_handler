@@ -15,8 +15,9 @@ class DataFeeder:
     """
     Data 수신과 관련된 class 입니다. Kiwoom 인스턴스(instance)를 생성자의 매개변수로 받습니다.
 
-    TR과 관련된 자세한 사항은 [키움증권 공식 API 개발
-    문서](https://download.kiwoom.com/web/openapi/kiwoom_openapi_plus_devguide_ver_1.5.pdf) 혹은 KOA StudioSA를 참조하시길 바랍니다.
+    TR과 관련된 자세한 사항은 [키움증권 공식 API 개발문서]
+    https://download.kiwoom.com/web/openapi/kiwoom_openapi_plus_devguide_ver_1.5.pdf)
+    혹은 KOA StudioSA를 참조하시길 바랍니다.
     """
 
     def __init__(self, kiwoom):
@@ -42,6 +43,18 @@ class DataFeeder:
         self.kiwoom.commRqData("주식기본정보요청", "OPT10001", 0, "2000")
 
     def getOPT10001(self, code):
+        """ OPT10001(주식기본정보요청)
+
+        Parameters
+        ----------
+        code : str
+
+        Returns
+        -------
+        dict
+            주식기본정보
+
+        """
 
         self.__OPT10001(code)
         OPT10001 = self.kiwoom.OPT10001
@@ -61,12 +74,13 @@ class DataFeeder:
         지정한 종목의 매도, 매수 호가 및 잔량을 반환합니다.
 
         params
-        ===========================
+        ----------
         code: str, 종목코드
 
         return
-        ============================
-        OPT10004: dict
+        ----------
+        dict
+
         """
 
         self.__OPT10004(code)
@@ -87,14 +101,17 @@ class DataFeeder:
         지정한 일별 OHLCV, 투자주체별 순매수 대금 등을 반환합니다.
 
         params
-        =========================
-        code: str, 종목코드
-        idx: int or list OPTional, default=None
+        ----------
+        code: str
+            종목코드
+        idx: int or list optional
             반환받을 행을 선택, none일 경우, 전체를 반환
+            default=None
+
 
         return
-        =========================
-        OPT10005: pandas.DataFrame
+        ----------
+        pandas.DataFrame
         """
 
         self.__OPT10005(code)
@@ -131,24 +148,31 @@ class DataFeeder:
         지정된 종목에 대한 투자주체별 거래량/거래대금
 
         params
-        ======================================================
-        date: str, "YYYYMMDD"
-        code: str, ex) "005930"
-        idx: int, 조회할 이전 영업일 수, defalut=None 전체조회;
-        gumaekGubun: str, 금액수량구분, 1:금액 ; 2:수량
-        maemaeGubun: str, 매매구분, 0:순매수, 1: 매수, 2:매도
-        danwiGubun: str, 단위구분, 1:주, 1000:천주
+        ----------
+        date: str
+            "YYYYMMDD"
+        code: str
+            종목코드 ex) "005930"
+        idx: int
+            조회할 과거 영업일 수, None일 경우 전체기간 조회
+            defalut=None
+        gumaekGubun: str
+            금액수량구분, 1:금액 ; 2:수량
+        maemaeGubun: str
+            매매구분, 0:순매수, 1: 매수, 2:매도
+        danwiGubun: str
+            단위구분, 1:주, 1000:천주
 
         return
-        ==================================================
-        OPT10059: pandas.DataFrame
+        ----------
+        pandas.DataFrame
         """
 
         self.__OPT10059(date, code, gumaekGubun, maemaeGubun, danwiGubun)
         OPT10059 = self.kiwoom.OPT10059
 
         if idx is not None:
-            OPT10059 = OPT10059.loc[idx]
+            OPT10059 = OPT10059.loc[-idx:]
 
         return OPT10059
 
@@ -179,14 +203,16 @@ class DataFeeder:
         """ 일자별실현손익요청
 
         params
-        =======================================================
+        ----------
         accNo: str
-        sdate: str - start date, YYYYMMDD
-        edate: str - end date, YYYYMMDD
+        sdate: str
+            start date, "YYYYMMDD"
+        edate: str
+            end date, "YYYYMMDD"
 
         return
-        ==================================================
-        OPT10059: dictionary
+        ----------
+        dict
         """
 
         if not edate:
@@ -223,17 +249,19 @@ class DataFeeder:
                 break
 
     def getOPT10075(self, accNo, inquiry="1", inquiry2="0"):
-        """ OPT10075 : 실시간미체결요청
+        """ OPT10075(실시간미체결요청)
 
         params
-        =======================================================
+        ----------
         accNo: str
-        inquiry: str - 0:체결+미체결, 1:미체결, 2:체결
-        inquiry2: str - 0:전체, 1:매도, 2:매수
+        inquiry: str
+            0:체결+미체결, 1:미체결, 2:체결
+        inquiry2: str
+            0:전체, 1:매도, 2:매수
 
         return
-        ==================================================
-        OPT10075: pandas.DataFrame
+        ----------
+        pandas.DataFrame
         """
 
         self.__OPT10075(accNo, inquiry, inquiry2)
@@ -259,15 +287,17 @@ class DataFeeder:
         """ OPT10080 : 주식분봉차트조회요청
 
         params
-        =======================================================
+        ----------
         code: str
-        tickRange: str - 1:1분, 3:3분, 5:5분, 10:10분, 15:15분, 30:30분, 45:45분, 60:60분
-        priceGubun: str - 0 or 1, 수신데이터 1:유상증자, 2:무상증자, 4:배당락, 8:액면분할,
+        tickRange: str
+            1:1분, 3:3분, 5:5분, 10:10분, 15:15분, 30:30분, 45:45분, 60:60분
+        priceGubun: str
+            0 or 1, 수신데이터 1:유상증자, 2:무상증자, 4:배당락, 8:액면분할,
             16:액면병합, 32:기업합병, 64:감자, 256:권리락
 
         return
-        ==================================================
-        OPT10080: pandas.DataFrame
+        ----------
+        pandas.DataFrame
         """
 
         self.__OPT10080(code, tickRange, priceGubun)
@@ -288,12 +318,15 @@ class DataFeeder:
         요청한 데이터는 self.kiwoom.OPTKWFIDData에 저장됩니다.
 
         params
-        =====================================
-        codeList: list, 종목코드가 담긴 list
+        ----------
+        codeList: array-like
+            종목코드(str)를 담은 list
 
         return
-        ======================================
-        data: pandas.DataFrame - row(개별 종목), columns(기준가, 시가 등 63개의 열)
+        ----------
+        pandas.DataFrame
+            row(개별 종목)
+            columns(기준가, 시가 등 63개의 열)
         """
 
         if not isinstance(codeList, list):
@@ -339,14 +372,17 @@ class DataFeeder:
         주문가능금액을 반환합니다.
 
         params
-        ===========================================================
+        ----------
         accNo: str
+            계좌 번호
         pswd: str
-        inquiry: str - 조회구분 = 1:추정조회, 2:일반조회
+            비밀번호, 자동 로그인 설정이 되어있으면, 입력하지 않아도 됨
+        inquiry: str
+            조회구분 = 1:추정조회, 2:일반조회
 
         return
-        ===========================================================
-        OPW00001: dict
+        ----------
+        dict
         """
 
         self.__OPW00001(accNo, pswd, inquiry)
@@ -376,13 +412,16 @@ class DataFeeder:
         계좌정보 및 보유종목 정보를 반환합니다.
 
         params
-        =========================================================
+        ----------
         accNo: str
+            계좌번호
         pswd: str
 
+
         return
-        =========================================================
-        OPW00004 :  dictionary, {'single':싱글데이터, 'multi':멀티데이터}
+        ----------
+        dict
+            {'single':싱글데이터, 'multi':멀티데이터}
         """
 
         self.__OPW00004(accNo, pswd)
@@ -420,19 +459,21 @@ class DataFeeder:
                 break
 
     def getOPW00007(self, date, accNo, inquiry="1"):
-        """
-        계좌별주문체결내역상세요청
+        """ OPW00007(계좌별주문체결내역상세요청)
 
         주문 정보
         params
-        ===================================
-        date: str - YYYYMMDD
+        ----------
+        date: str
+            "YYYYMMDD"
         accNo: str
-        inquiry: str - 1:주문순, 2:역순, 3:미체결, 4:체결내역만
+            계좌번호
+        inquiry: str
+            1:주문순, 2:역순, 3:미체결, 4:체결내역만
 
         return
-        ==================================================
-        OPW00007: dictionary
+        ----------
+        dict
         """
 
         self.__OPW00007(date, accNo, inquiry)
@@ -457,7 +498,13 @@ class DataFeeder:
     def getUnExOrderDict(self, accNo):
         """ 미체결 정보 반환
 
-        unExOrderDict: dictionary
+        Parameters
+        ----------
+        accNo: str
+
+        Returns
+        ----------
+        dict
         """
 
         inquiry = "1"  # 미체결
@@ -467,14 +514,34 @@ class DataFeeder:
         return unExOrderDict
 
     def getAccountDict(self, accNo):
-        """ 계좌 정보 """
+        """ 계좌정보 반환
+
+        Parameters
+        ----------
+        accNo : type
+            계좌번호
+
+        Returns
+        -------
+        dict
+
+        """
 
         OPW00004 = self.getOPW00004(accNo)
         accountDict = OPW00004["single"]
         return accountDict
 
     def getInventoryDict(self, accNo):
-        """ 현재 보유중인 개별 종목 정보 """
+        """ 현재 보유중인 개별 종목 정보 요청
+
+        Parameters
+        ----------
+        accNo : str
+
+        Returns
+        -------
+        list
+        """
 
         OPW00004Data = self.getOPW00004(accNo)
         inventoryDictList = OPW00004Data["multi"]
@@ -482,7 +549,17 @@ class DataFeeder:
         return inventoryDictList
 
     def getInventoryCodes(self, accNo):
-        """ 현재 보유중인 종목코드 반환 """
+        """ 현재 보유중인 종목코드 반환
+
+        Parameters
+        ----------
+        accNo : str
+            계좌 번호
+
+        Returns
+        -------
+        list
+        """
 
         inventoryDict = self.getInventoryDict(accNo)
         codeList = inventoryDict["종목코드"]
@@ -513,12 +590,13 @@ class DataFeeder:
         }
 
         params
-        =========================================================
-        market: string
+        ----------
+        market: str
 
         return
-        =========================================================
-        codeList: list -  조회한 시장에 소속된 종목 코드를 담은 list
+        ----------
+        list
+            조회한 시장에 소속된 종목 코드를 담은 list
         """
 
         if not self.kiwoom.getConnectState():
@@ -541,24 +619,20 @@ class DataFeeder:
         여러 시장의 종목코드를 List 형태로 반환하는 헬퍼 메서드.
 
         params
-        ===========================================================
-        market: array-like or strings - {
-         '0': 장내,
-         '3': ELW,
-         '4': 뮤추얼펀드,
-         '5': 신주인수권,
-         '6': 리츠,
-         '8': ETF,
-         '9': 하이일드펀드,
-         '10': 코스닥,
-         '30': 제3시장
-        }
+        ----------
+        market: array-like or str
+            '0': 장내, '3': ELW, '4': 뮤추얼펀드, '5': 신주인수권, '6': 리츠,
+            '8': ETF, '9': 하이일드펀드, '10': 코스닥, '30': 제3시장
+
 .
 
         return
-        =========================================================
-        codeList: list -  조회한 시장에 소속된 종목 코드를 담은 list
+        ----------
+        list -  조회한 시장에 소속된 종목 코드를 담은 list
         """
+
+        if isinstance(market, str):
+            return self.getCodeListByMarket(market)
 
         codeList = []
 
@@ -572,12 +646,14 @@ class DataFeeder:
         """ 종목코드의 한글명을 반환한다.
 
         params
-        ==============================================
-        code: string - 종목코드
+        ----------
+        code: str
+            종목코드
 
         return
-        ==============================================
-        name: string - 종목코드의 한글명
+        ----------
+        str
+            종목코드의 한글명
         """
 
         if not self.kiwoom.getConnectState():
@@ -590,7 +666,19 @@ class DataFeeder:
         return name
 
     def getMarketByCode(self, code):
-        """ 해당 종목이 상장된 시장정보 반환 """
+        """ 해당 종목이 상장된 시장정보 반환
+
+        Parameters
+        ----------
+        code : str
+            종목 코드
+
+        Returns
+        -------
+        str
+            해당 종목이 시장된 시장, ex) "ksp"
+
+        """
 
         if code in self.kspCodeList:
             return "ksp"
@@ -604,16 +692,16 @@ class DataFeeder:
         return None
 
     def getMasterStockState(self, code):
-        """
-        종목코드의 현재 상태를 반환한다.
+        """ 종목코드의 현재 상태를 반환한다.
 
         params
-        ==============================================
+        ----------
         code: str
-
+            종목코드
         return
-        =============================================
-        stateList: list,  증거금비율, 종목상태(관리종목, 거래정지 등..)
+        ----------
+        list
+            증거금비율, 종목상태(관리종목, 거래정지 등..)
         """
 
         if not isinstance(code, str):
@@ -628,8 +716,9 @@ class DataFeeder:
         """ 해당 종목이 관리종목 혹은 거래정지에 해당하는지 확인하는 함수
 
         return
-        =======================
-        isIssue: bool - True: 관리종목 or 거래정지종목
+        ----------
+        bool
+            True: 관리종목 or 거래정지종목
         """
 
         stateList = self.kiwoom.getMasterStockState(code)
@@ -640,7 +729,20 @@ class DataFeeder:
         return False
 
     def getCodesFromKRX(self, market="all"):
-        """ 상장기업 목록 (한국거래소) """
+        """ 한국거래소(KRX)에서 상장기업 목록 가져오는 함수
+
+        Parameters
+        ----------
+        market : str
+            시장명 : "ksp", "kdq", "all"
+            defalut="all"
+
+        Returns
+        -------
+        list
+            종목코드 list
+
+        """
 
         kspURL = "https://kind.krx.co.kr/corpgeneral/corpList.do?method=download&marketType=stockMkt&searchType=13"
         ksdURL = "https://kind.krx.co.kr/corpgeneral/corpList.do?method=download&marketType=kdqMkt&searchType=13"
@@ -672,8 +774,14 @@ class DataFeeder:
         """ 입력받은 매개변수(keyword)에 대한 데이터를 갖고 있는 TR 목록을 반환합니다.
 
         params
-        ===========================
-        keyword: str - 요청하고자 하는 데이터 ex)"종가", "등락률"
+        ----------
+        keyword: str
+            요청하고자 하는 데이터 ex)"종가", "등락률"
+
+        Returns
+        ----------
+        list
+            해당 데이터를 갖고 있는 TR 목록
         """
         trNames = []
 
@@ -688,6 +796,17 @@ class DataFeeder:
 
     ### logging 관련 매서드
     def showTradingSummary(self, date):
+        """ 해당 일의 매매 성과를 요약하여 출력
+
+        Parameters
+        ----------
+        date : str
+            "YYMMDD"
+
+        Returns
+        -------
+
+        """
 
         # logging할 데이터
         traSummaryDict = self.getOPT10074(self.accNo, date)

@@ -17,6 +17,8 @@ from ._logger import *
 
 
 class Kiwoom(QAxWidget):
+    """ 키움증권 API를 다루기 위한 클래스입니다. """
+
     def __init__(self):
         super().__init__()
 
@@ -80,9 +82,10 @@ class Kiwoom(QAxWidget):
         returnCode가 0이면 로그인 성공
         그 외에는 ReturnCode 클래스 참조.
 
-        params
+        Paramters
         ----------
-        returnCode: int - 0이면 로그인 성공, 이외에는 로그인 실패
+        returnCode: int
+            0이면 로그인 성공, 이외에는 로그인 실패
         """
 
         t = dt.now()
@@ -116,14 +119,17 @@ class Kiwoom(QAxWidget):
         서버로 어떤 요청을 했을 때(로그인, 주문, 조회 등),
         그 요청에 대한 처리내용을 전달해준다.
 
-        params
-        ===========================================
+        Paramters
+        ----------
         scrNo: str,
             화면번호(4자리, 사용자 정의,
             서버에 조회나 주문을 요청할 때 이 요청을 구별하기 위한 키값)
-        rqName: str, TR 요청명(사용자 정의)
+        rqName: str
+            TR 요청명(사용자 정의)
         trCode: str
-        msg: str, 서버로 부터의 메시지
+            요청한 TR명
+        msg: str
+            서버로 부터의 메시지
         """
 
         self.logger.debug(msg)
@@ -152,14 +158,17 @@ class Kiwoom(QAxWidget):
         trCode 및 rqName과 관련된 자세한 내용은 OPEN API+ 개발가이드 및
         KOA StudioSA를 참고하시기 바랍니다.
 
-
-        params
-        ===================================================================
-        scrNo: str - 화면번호(4자리)
-        rqName: str - TR 요청명(commRqData() 메소드 호출시 사용된 rqName)
+        Paramters
+        ----------
+        scrNo: str
+            화면번호(4자리)
+        rqName: str
+            TR 요청명(commRqData() 메소드 호출시 사용된 rqName)
         trCode: str
+            요청한 TR 코드
         recordName: str
-        inquiry: str - 조회("0" or "": 남은 데이터 없음, '2': 남은 데이터 있음)
+        inquiry: str
+            조회("0" or "": 남은 데이터 없음, '2': 남은 데이터 있음)
         """
 
         self.isNext = 0 if ((inquiry == "0") or (inquiry == "")) else 2  # 추가조회 여부
@@ -266,11 +275,14 @@ class Kiwoom(QAxWidget):
         주문 접수/확인 수신시 이벤트
         주문요청후 주문접수, 체결통보, 잔고통보를 수신할 때 마다 호출됩니다.
 
-        params
-        =================================================================
-        gubun: str - 체결구분('0': 주문접수/주문체결, '1': 잔고통보, '3': 특이신호)
-        itemCnt: int - fid의 갯수
-        fidList: str - fidList 구분은 ;(세미콜론) 이다.
+        Paramters
+        ----------
+        gubun: str
+            체결구분('0': 주문접수/주문체결, '1': 잔고통보, '3': 특이신호)
+        itemCnt: int
+            fid의 갯수
+        fidList: str
+            fidList 구분은 ;(세미콜론) 이다.
         """
 
         # Logging
@@ -321,29 +333,31 @@ class Kiwoom(QAxWidget):
         """
         현재 접속상태를 반환합니다.
 
-        return
-        =============================
-        state: int - 0(미연결), 1(연결)
+        Returns
+        ----------
+        state: int
+            0(미연결), 1(연결)
         """
 
         state = self.dynamicCall("GetConnectState()")
         return state
 
     def getLoginInfo(self, tag, isConnectState=False):
-        """
-        사용자의 tag에 해당하는 정보를 반환한다.
+        """ 사용자의 tag에 해당하는 정보를 반환한다.
 
         tag에 올 수 있는 값은 아래와 같다.
         ACCOUNT_CNT, ACCNO, USER_ID, USER_NAME, GetServerGubun
 
-        params
-        =================================================
-        tag: string
-        isConnectState: bool - 접속상태을 확인할 필요가 없는 경우 True로 설정.
+        Paramters
+        ----------
+        tag: str
+        isConnectState: bool
+            접속상태을 확인할 필요가 없는 경우 True로 설정.
 
-        return
-        =================================================
-        info : string - 입력한 tag에 대응하는 정보
+        Returns
+        ----------
+        info : str
+            입력한 tag에 대응하는 정보
         """
 
         if not isConnectState:
@@ -369,12 +383,12 @@ class Kiwoom(QAxWidget):
         return info
 
     def getServerGubun(self):
-        """
-        서버구분 정보를 반환한다.
+        """ 서버구분 정보를 반환한다.
 
-        return
-        =====================================
-        server_status: string ("1": 모의투자서버, else: 실서버)
+        Returns
+        ----------
+        server_status: str
+            ("1": 모의투자서버, else: 실서버)
         """
 
         serverStatus = self.dynamicCall(
@@ -391,13 +405,14 @@ class Kiwoom(QAxWidget):
     # 합산하는 것으로 연속조회 역시 CommRqData()를 이용므로 합산됩니다.
 
     def setInputValue(self, key, value):
-        """
-        TR 전송에 필요한 값을 설정한다.
+        """ TR 전송에 필요한 값을 설정한다.
 
-        params
-        =======================================
-        key: str - TR에 명시된 input 이름, ex) 계좌번호, 종목코드
-        value: str - key에 해당하는 값, ex) 88231524, 005930
+        Paramters
+        ----------
+        key: str
+            TR에 명시된 input 이름, ex) 계좌번호, 종목코드
+        value: str
+            key에 해당하는 값, ex) 88231524, 005930
         """
 
         if not (isinstance(key, str) and isinstance(value, str)):
@@ -406,22 +421,25 @@ class Kiwoom(QAxWidget):
         self.dynamicCall("SetInputValue(QString, QString)", key, value)
 
     def commRqData(self, rqName, trCode, inquiry, scrNo):
-        """
-        키움서버에 TR 요청을 한다.
+        """ 키움서버에 TR 요청을 한다.
         요청한 데이터는 데이터 수신 이벤트 발생 시 eventReceiveTrData 매서드에서 처리
 
         1초에 5회 제한
 
-        params
-        ============================================================
-        rqName: string - TR 요청명(사용자 정의)
-        trCode: string
-        inquiry: int - 조회(0: 조회, 2: 남은 데이터 이어서 요청)
-        scrNo: string - 화면번호(4자리)
+        Paramters
+        ----------
+        rqName: str
+            TR 요청명(사용자 정의)
+        trCode: str
+        inquiry: int
+            조회(0: 조회, 2: 남은 데이터 이어서 요청)
+        scrNo: str
+            화면번호(4자리)
 
-        return
-        ============================================================
-        returnCode: str - 0(정상), -200(시세과부하), -201(조회전문작성 에러)
+        Returns
+        ----------
+        returnCode: str
+            0(정상), -200(시세과부하), -201(조회전문작성 에러)
         """
 
         if not self.getConnectState():
@@ -482,14 +500,15 @@ class Kiwoom(QAxWidget):
 
         차트조회는 한번에 최대 900개 데이터를 수신할 수 있습니다.
 
-        params
-        ============================================================
+        Paramters
+        ----------
         trCode: str
         rqName: str
 
-        return
-        ============================================================
-        cnt : int, 서버에서 전달받은 데이터 갯수
+        Returns
+        ----------
+        cnt : int
+            서버에서 전달받은 데이터 갯수
         """
 
         if not (isinstance(trCode, str) and isinstance(rqName, str)):
@@ -499,9 +518,7 @@ class Kiwoom(QAxWidget):
         return cnt
 
     def getCommData(self, trCode, rqName, index, key):
-        """
-
-        데이터 획득 메서드
+        """ 데이터 획득 메서드
         evnetReceiveTrData() 이벤트 메서드가 호출될 때, 그 안에서
         조회데이터를 얻어오는 메서드입니다. 이 함수는 반드시 OnReceiveTRData()
         이벤트가 호출될때 그 안에서 사용해야 합니다.
@@ -510,16 +527,18 @@ class Kiwoom(QAxWidget):
         멀티데이터는 getRepeatCnt 매서드로 데이터 수를 확인한 후,
         loop문으로 index를 1씩 늘리며 접근
 
-        params
-        ========================================================
-        trCode: string
-        rqName: string - TR 요청명(commRqData() 메소드 호출시 사용된 rqName)
+        Paramters
+        ----------
+        trCode: str
+        rqName: str
+            TR 요청명(commRqData() 메소드 호출시 사용된 rqName)
         index: int
-        key: string - 수신 데이터에서 얻고자 하는 값의 키(출력항목이름)
+        key: str
+            수신 데이터에서 얻고자 하는 값의 키(출력항목이름)
 
-        return
-        =========================================================
-        data: string
+        Returns
+        ----------
+        data: str
         """
 
         if not (
@@ -537,20 +556,21 @@ class Kiwoom(QAxWidget):
         return data.strip()
 
     def getCommDataEx(self, trCode, multiDataName):
-        """
-        멀티 데이터 획득
+        """ 멀티 데이터 획득
 
         조회 수신데이터 크기가 큰 차트데이터를 한번에 가져올 목적으로 만든 전용함수입니다.
         receiveTrData() 이벤트 메서드가 호출될 때, 그 안에서 사용해야 합니다.
 
-        params
-        ==================================================================
-        trCode: string
-        multiDataName: string,  KOA에 명시된 멀티데이터명
+        Paramters
+        ----------
+        trCode: str
+        multiDataName: str
+            KOA에 명시된 멀티데이터명
 
-        return
-        ==================================================================
-        data: list,  중첩리스트
+        Returns
+        ----------
+        data: list
+            중첩리스트 (list of lists)
         """
 
         if not (isinstance(trCode, str) and isinstance(multiDataName, str)):
@@ -582,20 +602,22 @@ class Kiwoom(QAxWidget):
 
         1초에 5회 제한
 
-        params
-        ==================================================================================
-        arrCode: string - 한번에 100종목까지 조회가능, 세미콜론(;)으로 구분.
+        Paramters
+        ----------
+        arrCode: str
+            한번에 100종목까지 조회가능, 세미콜론(;)으로 구분.
         next: int (0: 조회, 1: 남은 데이터 이어서 조회)
-          - 기존 API 문서는 boolean type
-        codeCount: int - codes에 지정한 종목의 갯수.
-        rqName: string
-        scrNo: string
+            기존 API 문서는 boolean type
+        codeCount: int
+            codes에 지정한 종목의 갯수.
+        rqName: str
+        scrNo: str
         typeFlag: int
-          주식과 선물옵션 구분(0: 주식, 3: 선물옵션),
-          기존 API 문서에서는 가운데 위치하지만, 맨 뒤로 이동시켰음
+            주식과 선물옵션 구분(0: 주식, 3: 선물옵션),
+            기존 API 문서에서는 가운데 위치하지만, 맨 뒤로 이동시켰음
 
-        return
-        ===================================================================================
+        Returns
+        ----------
         returnCode: str - 0(정상), -200(시세과부하), -201(조회전문작성 에러)
         """
 
@@ -659,8 +681,7 @@ class Kiwoom(QAxWidget):
         originOrderNo,
     ):
 
-        """
-        주식 주문 메서드
+        """ 주식 주문 메서드
 
         sendOrder() 메소드 실행시,
         OnReceiveMsg, OnReceiveTrData, OnReceiveChejanData 이벤트가 발생한다.
@@ -669,23 +690,30 @@ class Kiwoom(QAxWidget):
         OnReceiveTrData 이벤트를 통해서는 주문번호를 얻을 수 있는데,
         주문후 OnReceiveTrData에서 주문번호가 ''공백으로 전달되면 주문접수 실패를 의미한다.
 
-        params
-        =======================================================================
-        rqName: string - 주문 요청명(사용자 정의)
-        scrNo: string - 화면번호(4자리)
-        accNo: string - 계좌번호(10자리)
+        ※시장가, 최유리지정가, 최우선지정가, 시장가IOC, 최유리IOC,시장가FOK,
+        최유리FOK, 장전시간외, 장후시간외 주문시 주문가격을 입력하지 않습니다.
+
+        Paramters
+        ----------
+        rqName: str
+            주문 요청명(사용자 정의)
+        scrNo: str
+            화면번호(4자리)
+        accNo: str
+            계좌번호(10자리)
         orderType: int
             주문유형(1: 신규매수, 2: 신규매도, 3: 매수취소, 4: 매도취소, 5: 매수정정, 6: 매도정정)
-        code: string - 종목코드
-        qty: int - 주문수량
-        price: int - 주문단가
-        hogaType: string
-            거래구분(00: 지정가, 03: 시장가, 05: 조건부지정가, 06: 최유리지정가, 그외에는 api 문서참조)
-        originOrderNo: string
+        code: str
+            종목코드
+        qty: int
+            주문수량
+        price: int
+            주문단가
+        hogaType: str
+            거래구분(00: 지정가, 03: 시장가, 05: 조건부지정가, 06: 최유리지정가,
+            그외에는 api 문서참조)
+        originOrderNo: str
             원주문번호(신규주문에는 공백, 정정및 취소주문시 원주문번호를 입력합니다.)
-
-        ※  시장가, 최유리지정가, 최우선지정가, 시장가IOC, 최유리IOC,시장가FOK,
-            최유리FOK, 장전시간외, 장후시간외 주문시 주문가격을 입력하지 않습니다.
         """
 
         # server connection check
@@ -760,12 +788,12 @@ class Kiwoom(QAxWidget):
         이 메서드는 receiveChejanData() 이벤트 메서드가 호출될 때
         그 안에서 사용해야 합니다.
 
-        params
-        ===========================
+        Paramters
+        ----------
         fid: str
 
-        return
-        ===========================
+        Returns
+        ----------
         data: str
         """
 
@@ -780,8 +808,8 @@ class Kiwoom(QAxWidget):
 
         OnEventReceiveData에서 호출
 
-        params
-        ==================================================
+        Paramters
+        ----------
         trCode: str
         rqName: str
         """
@@ -802,8 +830,8 @@ class Kiwoom(QAxWidget):
 
         OnEventReceiveData에서 호출
 
-        params
-        ==================================================
+        Paramters
+        ----------
         trCode: str
         rqName: str
 
@@ -826,6 +854,21 @@ class Kiwoom(QAxWidget):
         return returnDict
 
     def _getSingleAndMultiData(self, trCode, rqName):
+        """ 싱글데이터와 멀티데이터를 동시에 수신받는 매서드
+
+        OnEventReceiveData에서 호출
+
+        Parameters
+        ----------
+        trCode : str
+        rqName : str
+
+        Returns
+        -------
+        returnDict: dictionary
+            Description of returned object.
+
+        """
 
         returnDict = {"single": {}, "multi": {}}
         returnDict["single"] = self._getSingleData(trCode, rqName)
@@ -838,7 +881,7 @@ class APIDelayCheck:
         """
         Kiwoom API 요청 제한을 피하기 위해 요청을 지연하는 클래스입니다.
 
-        params
+        Paramters
         =================================
         logger: Kiwoom Class의 logger - defalut=None
         """

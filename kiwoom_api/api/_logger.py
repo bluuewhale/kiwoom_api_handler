@@ -1,10 +1,16 @@
+from datetime import datetime as dt
 import logging
 import logging.handlers
+import os
 
 
 class Logger():
 
-    def __init__(self, name, filePath, streamHandler=False):
+    def __init__(self, name, streamHandler=True):
+        
+        self.makeFolder()
+        filePath = "log/{}.txt".format(dt.now().strftime('%Y%m%d'))
+
         # 로깅용 설정파일
         self.__logger = logging.getLogger(name)
         self.__logger.setLevel(logging.DEBUG)
@@ -15,6 +21,12 @@ class Logger():
         if streamHandler:
             streamHandler = logging.StreamHandler()
             self.__logger.addHandler(streamHandler)
+    
+    def makeFolder(self):
+        try:
+            os.mkdir("log")
+        except FileExistsError:
+            pass
 
     def debug(self, msg):
         self.__logger.debug(msg)

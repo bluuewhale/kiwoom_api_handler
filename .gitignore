@@ -1,8 +1,6 @@
 __pycache__
 log
-
-kiwoom_api_handler/runner
-
+beforeRelease.txt
 
 # vscode
 .vscode/

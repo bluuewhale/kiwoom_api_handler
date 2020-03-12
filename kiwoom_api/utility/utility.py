@@ -38,4 +38,4 @@ def str2float(x):
 
 
 def removeSign(x):
-    return x.replace("+", "").replace("-", "")
+    return x.replace("+", "").replace("-", "").replace(",", "")

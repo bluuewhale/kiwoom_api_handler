@@ -41,13 +41,13 @@ pip install -r requirements.txt
 
 ---
 
-### kiwoom_api_handler.api.Kiwoom
+### kiwoom_api.api.Kiwoom
 키움증권 OPEN API+ ActiveX Control의 함수와 이벤트를 관리하는 class입니다.
 
 데이터 수신 및 주문집행과 관련된 클래스의 생성자의 매개변수로 Kiwoom 클래스의 instance를 받습니다.
 
 ---
-### kiwoom_api_handler.api.DataFeeder
+### kiwoom_api.api.DataFeeder
 Data 수신과 관련된 기능을 담당하는 class 입니다. **생성자의 매개변수로 Kiwoom 인스턴스(instance)를 받습니다.**
 
 #### 현재까지 요청 가능한 TR 목록
@@ -70,7 +70,7 @@ TR과 관련된 자세한 사항은 [키움증권 공식 OPEN API+ 개발
 ```python
 import sys
 from PyQt5.QtWidgets import QApplication
-from kiwoom_api_handler.api import Kiwoom, DataFeeder
+from kiwoom_api.api import Kiwoom, DataFeeder
 
 if __name__ == "__main__":
 
@@ -82,15 +82,34 @@ if __name__ == "__main__":
 
     code = "005930" # 삼성전자
 
-    print(feeder.getAccNo()) # 계좌번호 요청
-    print(feeder.getOPT10004(code)) #주식호가요청
-    print(feeder.getOPT10005(code)) #주식일주월시분요청
-```
+    # TR요청(request)에 필요한 parameter는 KOAStudio를 참고하시길 바랍니다.
+    # OPT10004: 주식호가요청
+    params = {"종목코드": code}
+    data = feeder.request(trCode="OPT10004", **params)
+
+    # OPT10059: 종목별투자자기관별요청
+    params = {
+            "일자": "202003013",
+            "종목코드": code,
+            "금액수량구분": "1",  # 1:금액, 2:수량
+            "매매구분": "0",  # 0:순매수, 1:매수, 2:매도
+            "단위구분": "1",  # 1:단주, 1000:천주
+        }
+    data = feeder.request(trCode='OPT10059', **params)
+
+    # OPTKWFID: 관심종목정보요청 
+    # ※ 예외적으로 requestOPTKWIFID 메서드를 호출
+    params = {
+            "arrCode": "005930;023590", # 종목코드를 ;로 구분
+            "next": 0, # 0 연속조회여부 (0: x)
+            "codeCount": 2, # 종목코드 갯수
+    }
+    data = feeder.request(**params)
 
 
 ---
 
-### kiwoom_api_handler.api.Executor
+### kiwoom_api.api.Executor
 
 주문 정보(order specification) 생성 및 제출과 관련된 기능을 담당하는 class입니다. **생성자의 매개변수로 Kiwoom 인스턴스(instance)를 받습니다.**
 

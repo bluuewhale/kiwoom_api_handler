@@ -5,488 +5,144 @@ import os
 import pandas as pd
 
 from kiwoom_api.api._errors import *
+from kiwoom_api.api._config import *
 
 
-class DataFeeder:
+class Feeder:
+    def __init__(self, **kwargs):
+        pass
+
+    def request(self):
+        raise NotImplementedError
+
+
+class DataFeeder(Feeder):
     """ Data 수신과 관련된 class 입니다. Kiwoom 인스턴스(instance)를 생성자의 매개변수로 받습니다.
 
     TR과 관련된 자세한 사항은 [키움증권 공식 API 개발
     문서](https://download.kiwoom.com/web/openapi/kiwoom_openapi_plus_devguide_ver_1.5.pdf) 혹은 KOA StudioSA를 참조하시길 바랍니다.
     """
 
-    def __init__(self, kiwoom):
-
+    def __init__(self, kiwoom, **kwargs):
         self.kiwoom = kiwoom
-        self.accNo = self.getAccNo()
 
-        # 각 시장에 상장된 종목 코드
-        self.kspCodeList = self.getCodeListByMarket("0")
-        self.kdqCodeList = self.getCodeListByMarket("10")
-        self.etfCodeList = self.getCodeListByMarket("8")
+        for k, v in kwargs:
+            setattr(self, k, v)
 
-    ###############################################################
-    ############## TR,주문 및 잔고 관련 헬퍼 메서드   ###############
-    ###############################################################
+    def request(self, trCode, **kwargs):
+        trCode = trCode.upper()
 
-    def __OPT10004(self, code):
+        for k, v in kwargs.items():
+            self.kiwoom.setInputValue(k, v)
 
-        if not isinstance(code, str):
-            raise ParameterTypeError()
+        trName = getattr(TRName, trCode)
+        self.kiwoom.commRqData(trName, trCode, 0, "0000")
 
-        self.kiwoom.setInputValue("종목코드", code)
-        self.kiwoom.commRqData("주식호가요청", "OPT10004", 0, "2000")
+        return getattr(self.kiwoom, trCode)
 
-    def getOPT10004(self, code):
-        """ 주식호가요청 : OPT10004
-        지정한 종목의 매도, 매수 호가 및 잔량을 반환합니다.
+    def requestOPTKWFID(
+        self, arrCode, next, codeCount, rqName="OPTKWFID", scrNo="0000", typeFlag=0
+    ):
+        """ 복수종목조회 메서드(관심종목조회 메서드라고도 함).
+
+        이 메서드는 setInputValue() 메서드를 이용하여, 사전에 필요한 값을 지정하지 않는다.
+        단지, 메서드의 매개변수에서 직접 종목코드를 지정하여 호출한다.
+
+        데이터 수신은 receiveTrData() 이벤트에서 아래 명시한 항목들을 1회 수신하며,
+        이후 receiveRealData() 이벤트를 통해 실시간 데이터를 얻을 수 있다.
+        복수종목조회 TR 코드는 OPTKWFID 이며, 요청 성공시 아래 항목들의 정보를 얻을 수 있다.
+
+        [종목코드, 종목명, 현재가, 기준가, 전일대비, 전일대비기호, 등락율, 거래량, 거래대금,
+        체결량, 체결강도, 전일거래량대비, 매도호가, 매수호가, 매도1~5차호가, 매수1~5차호가,
+        상한가, 하한가, 시가, 고가, 저가, 종가, 체결시간, 예상체결가, 예상체결량, 자본금,
+        액면가, 시가총액, 주식수, 호가시간, 일자, 우선매도잔량, 우선매수잔량,우선매도건수,
+        우선매수건수, 총매도잔량, 총매수잔량, 총매도건수, 총매수건수, 패리티, 기어링, 손익분기,
+        잔본지지, ELW행사가, 전환비율, ELW만기일, 미결제약정, 미결제전일대비, 이론가,
+        내재변동성, 델타, 감마, 쎄타, 베가, 로]
+
+        1초에 5회 제한
 
         Parameters
         ----------
-        code: str
-            종목코드
+        arrCode: str
+            종목코드, 세미콜론(;)으로 구분, 한번에 100종목까지 조회가능
+        next: int 
+            (0: 조회, 1: 남은 데이터 이어서 조회)
+            기존 API 문서는 boolean type
+        codeCount: int 
+            codes에 지정한 종목의 갯수.
+        rqName: str
+        scrNo: str
+        typeFlag: int
+          주식과 선물옵션 구분(0: 주식, 3: 선물옵션),
+          기존 API 문서에서는 가운데 위치하지만, 맨 뒤로 이동시켰음
 
+        return
+        ----------
+        str 
+            0(정상), -200(시세과부하), -201(조회전문작성 에러)
+        """
+
+        self.kiwoom.commKwRqData(arrCode, next, codeCount, rqName, scrNo, typeFlag)
+        return getattr(self.kiwoom, "OPTKWFID")
+
+    #############################
+    ###### utility methods ######
+    #############################
+
+    def getAccNo(self):
+        return self.kiwoom.getLoginInfo("ACCNO").rstrip(";")
+
+    def getDeposit(self, accNo):
+        """ D+2 추정예수금 반환 
+        
+        Returns
+        ----------
+        int
+        """
+
+        OPW00004 = self.request("OPW00004", **{"계좌번호": accNo})
+        deposit = int(OPW00004.get("싱글데이터").get("D+2추정예수금").replace(",", ""))
+        return deposit
+
+    def getUnExOrders(self, accNo, code=""):
+        """ 미체결 정보 반환
+        
         Returns
         ----------
         dict
         """
 
-        self.__OPT10004(code)
-        OPT10004 = self.kiwoom.OPT10004
-        return OPT10004
-
-    def __OPT10005(self, code):
-
-        if not isinstance(code, str):
-            raise ParameterTypeError()
-
-        self.kiwoom.setInputValue("종목코드", code)
-        self.kiwoom.commRqData("주식일주월시분요청", "OPT10005", 0, "2000")
-
-    def getOPT10005(self, code):
-        """ 주식일주월시분요청 : OPT10005
-        지정한 일별 OHLCV, 투자주체별 순매수 대금 등을 반환합니다.
-
-        Parameters
-        -----------
-        code: str
-            종목코드
-        idx: int or list Optional
-            반환받을 행을 선택, none일 경우, 전체를 반환
-            default=None
-
-        Returns
-        -----------
-        pandas.DataFrame
-        """
-
-        self.__OPT10005(code)
-        OPT10005 = self.kiwoom.OPT10005
-        return OPT10005
-
-    def __OPT10059(self, date, code, gumaekGubun=1, maemaeGubun=0, danwiGubun=1):
-
-        if not (
-            isinstance(date, str),
-            isinstance(code, str),
-            isinstance(gumaekGubun, str),
-            isinstance(maemaeGubun, str),
-            isinstance(danwiGubun, str),
-        ):
-            raise ParameterTypeError()
-
-        if not (len(date) == 8):
-            raise ParameterValueError()
-
-        self.kiwoom.setInputValue("일자", date)
-        self.kiwoom.setInputValue("종목코드", code)
-        self.kiwoom.setInputValue("금액수량구분", gumaekGubun)
-        self.kiwoom.setInputValue("매매구분", maemaeGubun)
-        self.kiwoom.setInputValue("단위구분", danwiGubun)
-        self.kiwoom.commRqData("종목별투자자기관별요청", "OPT10059", 0, "2000")
-
-    def getOPT10059(
-        self, date, code, idx=None, gumaekGubun="1", maemaeGubun="0", danwiGubun="1"
-    ):
-        """ 종목별투자자기관별요청 : OPT10059
-        지정된 종목에 대한 투자주체별 거래량/거래대금
-
-        Parameters
-        -------------------        
-        date: str
-            "YYYYMMDD"
-        code: str
-            ex) "005930"
-        idx: int
-            조회할 이전 영업일 수
-            defalut=None 전체조회;
-        gumaekGubun: str
-            금액수량구분, 1:금액 ; 2:수량
-        maemaeGubun: str
-            매매구분, 0:순매수, 1: 매수, 2:매도
-        danwiGubun: str 
-            단위구분, 1:주, 1000:천주
-
-        Returns
-        ----------
-        pandas.DataFrame
-        """
-
-        self.__OPT10059(date, code, gumaekGubun, maemaeGubun, danwiGubun)
-        OPT10059 = self.kiwoom.OPT10059
-
-        if idx is not None:
-            OPT10059 = OPT10059.loc[idx]
-        return OPT10059
-
-    def __OPT10074(self, accNo, sdate, edate):
-
-        if not (isinstance(accNo, str), isinstance(sdate, str), isinstance(edate, str)):
-            raise ParameterTypeError()
-
-        if not ((len(sdate) == 8), (len(edate) == 8)):
-            raise ParameterValueError()
-
-        isNext = 0  # 최초에는 0으로 지정
-
-        while True:
-            self.kiwoom.setInputValue("계좌번호", accNo)
-            self.kiwoom.setInputValue("시작일자", sdate)
-            self.kiwoom.setInputValue("종료일자", edate)
-            self.kiwoom.commRqData("일자별실현손익요청", "OPT10074", isNext, "1074")
-
-            isNext = self.kiwoom.isNext
-            if not isNext:
-                break
-
-    def getOPT10074(self, accNo, sdate, edate=""):
-        """ 일자별실현손익요청
-
-        Parameters
-        ----------
-        accNo: str
-        sdate: str 
-            start date, YYYYMMDD
-        edate: str
-            end date, YYYYMMDD
-
-        Returns
-        ----------
-        dictionary
-        """
-
-        if not edate:
-            edate = sdate
-
-        self.__OPT10074(accNo, sdate, edate)
-        return self.kiwoom.OPT10074
-
-    def __OPT10075(self, accNo, inquiry, inquiry2):
-
-        if not (
-            isinstance(accNo, str),
-            isinstance(inquiry, str),
-            isinstance(inquiry2, str),
-        ):
-            raise ParameterTypeError()
-
-        if not ((inquiry in ["0", "1", "2"]), (inquiry2 in ["0", "1", "2"])):
-            raise ParameterValueError()
-
-        isNext = 0  # 최초에는 0으로 지정
-
-        while True:
-            self.kiwoom.setInputValue("계좌번호", accNo)
-            self.kiwoom.setInputValue("체결구분", inquiry)
-            self.kiwoom.setInputValue("매매구분", inquiry2)
-            self.kiwoom.commRqData("실시간미체결요청", "OPT10075", isNext, "1075")
-
-            isNext = self.kiwoom.isNext
-            if not isNext:
-                break
-
-    def getOPT10075(self, accNo, inquiry="1", inquiry2="0"):
-        """ OPT10075 : 실시간미체결요청
-
-        Parameters
-        ----------
-        accNo: str
-        inquiry: str
-            0:체결+미체결, 1:미체결, 2:체결
-        inquiry2: str
-            0:전체, 1:매도, 2:매수
-
-        Returns
-        ----------
-        pandas.DataFrame
-        """
-
-        self.__OPT10075(accNo, inquiry, inquiry2)
-        return self.kiwoom.OPT10075
-
-    def __OPT10080(self, code, tickRange, priceGubun):
-
-        if not (
-            isinstance(code, str),
-            isinstance(tickRange, str),
-            isinstance(priceGubun, str),
-        ):
-
-            raise ParameterTypeError()
-
-        isNext = 0  # 최초에는 0으로 지정
-
-        while True:
-            self.kiwoom.setInputValue("종목코드", code)
-            self.kiwoom.setInputValue("틱범위", tickRange)
-            self.kiwoom.setInputValue("수정주가구분", priceGubun)
-            self.kiwoom.commRqData("주식분봉차트조회요청", "OPT10080", isNext, "1080")
-
-            isNext = self.kiwoom.isNext
-            if not isNext:
-                break
-
-    def getOPT10080(self, code, tickRange, priceGubun="0"):
-        """ OPT10080 : 주식분봉차트조회요청
-
-        Parameters
-        ----------
-        code: str
-        tickRange: str
-            1:1분, 3:3분, 5:5분, 10:10분, 15:15분, 30:30분, 45:45분, 60:60분
-        priceGubun: str 
-            0:수신데이터 1:유상증자, 2:무상증자, 4:배당락, 8:액면분할,
-            16:액면병합, 32:기업합병, 64:감자, 256:권리락
-
-        Returns
-        ----------
-        pandas.DataFrame
-        """
-
-        self.__OPT10080(code, tickRange, priceGubun)
-        return self.kiwoom.OPT10080
-
-    def __OPTKWFID(self, codes):
-
-        if not isinstance(codes, str):
-            raise ParameterTypeError()
-
-        codesCnt = len(codes.split(";"))
-        self.kiwoom.commKwRqData(codes, 0, codesCnt, "관심종목정보요청", "1111", typeFlag=0)
-
-    def getOPTKWFID(self, codeList):
-        """ 관심종목정보요청 : getOPTKWFID
-
-        한번에 100 종목 이상까지 조회가능하도록 수정한 헬퍼 매서드입니다.
-        요청한 데이터는 self.kiwoom.OPTKWFIDData에 저장됩니다.
-
-        Parameters
-        ----------=========
-        codeList: list, 종목코드가 담긴 list
-
-        return
-        ----------==========
-        data: pandas.DataFrame - row(개별 종목), columns(기준가, 시가 등 63개의 열)
-        """
-
-        if not isinstance(codeList, list):
-            raise ParameterTypeError
-
-        if not len(codeList):
-            raise ParameterValueError
-
-        data = pd.DataFrame()
-
-        cnt = len(codeList)
-        step = 100
-
-        for s, e in zip(range(0, cnt, step), range(step, cnt + step, step)):  # 100개씩
-
-            tmpCodeList = codeList[s:e]
-            tmpCodes = ";".join(tmpCodeList)
-
-            self.__OPTKWFID(tmpCodes)  # TR 전송
-            OPTKWFID = self.kiwoom.OPTKWFID
-
-            data = pd.concat((data, OPTKWFID), axis=0, copy=False)
-
-        data.reset_index(drop=True, inplace=True)
-        return data
-
-    def __OPW00001(self, accNo, pswd, inquiry):
-
-        if not (
-            isinstance(accNo, str),
-            isinstance(pswd, str),
-            isinstance(inquiry, str),
-        ):
-            raise ParameterTypeError()
-
-        self.kiwoom.setInputValue("계좌번호", accNo)
-        self.kiwoom.setInputValue("비밀번호", pswd)
-        self.kiwoom.setInputValue("조회구분", inquiry)
-        self.kiwoom.commRqData("예수금상세현황요청", "OPW00001", 0, "2001")
-
-    def getOPW00001(self, accNo, pswd="", inquiry="2"):
-        """ 예수금상세현황요청 : OPW00001
-        주문가능금액을 반환합니다.
-
-        Parameters
-        -------------------====
-        accNo: str
-        pswd: str
-        inquiry: str - 조회구분 = 1:추정조회, 2:일반조회
-
-        return
-        -------------------====
-        OPW00001: dict
-        """
-
-        self.__OPW00001(accNo, pswd, inquiry)
-        OPW00001 = self.kiwoom.OPW00001
-
-        return OPW00001
-
-    def __OPW00004(self, accNo, pswd):
-
-        if not (isinstance(accNo, str), isinstance(pswd, str)):
-            raise ParameterTypeError()
-
-        isNext = 0  # 최초에는 0으로 지정
-
-        while True:
-
-            self.kiwoom.setInputValue("계좌번호", accNo)
-            self.kiwoom.setInputValue("비밀번호", pswd)
-            self.kiwoom.commRqData("계좌평가현황요청", "OPW00004", isNext, "2004")
-
-            isNext = self.kiwoom.isNext
-            if not isNext:
-                break
-
-    def getOPW00004(self, accNo, pswd=""):
-        """ 계좌평가잔고내역요청 : OPW00004
-        계좌정보 및 보유종목 정보를 반환합니다.
-
-        Parameters
-        -------------------==
-        accNo: str
-        pswd: str
-
-        return
-        -------------------==
-        OPW00004 :  dictionary, {'싱글데이터':싱글데이터, '멀티데이터':멀티데이터}
-        """
-
-        self.__OPW00004(accNo, pswd)
-        OPW00004 = self.kiwoom.OPW00004
-
-        OPW00004["멀티데이터"]["종목코드"] = list(
-            map(lambda x: x.replace("A", ""), OPW00004["멀티데이터"]["종목코드"])
-        )  # 종목코드에서 A 제거
-
-        return OPW00004
-
-    def __OPW00007(self, date, accNo, inquiry):
-
-        if not (
-            isinstance(date, str),
-            isinstance(accNo, str),
-            isinstance(inquiry, str),
-        ):
-            raise ParameterTypeError()
-
-        if not (len(date) == 8):
-            raise ParameterValueError()
-
-        isNext = 0  # 최초에는 0으로 지정
-
-        while True:
-
-            self.kiwoom.setInputValue("주문일자", date)  # YYYYMMDD
-            self.kiwoom.setInputValue("계좌번호", accNo)
-            self.kiwoom.setInputValue("조회구분", inquiry)
-            self.kiwoom.commRqData("계좌별주문체결내역상세요청", "OPW00007", isNext, "2007")
-
-            isNext = self.kiwoom.isNext
-            if not isNext:
-                break
-
-    def getOPW00007(self, date, accNo, inquiry="1"):
-        """
-        계좌별주문체결내역상세요청
-
-        주문 정보
-        Parameters
-        ----------=======
-        date: str - YYYYMMDD
-        accNo: str
-        inquiry: str - 1:주문순, 2:역순, 3:미체결, 4:체결내역만
-
-        return
-        ----------======================
-        OPW00007: dictionary
-        """
-
-        self.__OPW00007(date, accNo, inquiry)
-        return self.kiwoom.OPW00007
-
-    ##########################################
-    ########## 계좌 조회 관련 메서드 ##########
-    ##########################################
-
-    def getAccNo(self):
-        """ 계좌번호 반환 """
-
-        return self.kiwoom.getLoginInfo("ACCNO").rstrip(";")
-
-    def getDeposit(self, accNo):
-        """ D+2 추정예수금 반환 """
-
-        OPW00004 = self.getOPW00004(accNo)
-        deposit = int(OPW00004["싱글데이터"]["D+2추정예수금"].replace(",", ""))
-        return deposit
-
-    def getUnExOrderDict(self, accNo):
-        """ 미체결 정보 반환
-
-        unExOrderDict: dictionary
-        """
-
-        inquiry = "1"  # 미체결
-        inquiry2 = "0"  # 매수+매도
-
-        unExOrderDict = self.getOPT10075(accNo, inquiry, inquiry2)
-        return unExOrderDict
+        params = {
+            "계좌번호": accNo,
+            "전체종목구분": "0",  # 전체
+            "매매구분": "0",  # 매수+매도
+            "체결구분": "1",  # 미체결
+        }
+
+        if code:
+            params["전체종목구분"] = "1"  # 종목
+            params["종목코드"] = code
+
+        return self.request("OPT10075", **params)
 
     def getAccountDict(self, accNo):
         """ 계좌 정보 """
 
-        OPW00004 = self.getOPW00004(accNo)
-        accountDict = OPW00004["싱글데이터"]
-        return accountDict
+        OPW00004 = self.request("OPW00004", **{"계좌번호": accNo})
+        return OPW00004.get("싱글데이터")
 
     def getInventoryDict(self, accNo):
         """ 현재 보유중인 개별 종목 정보 """
 
-        OPW00004Data = self.getOPW00004(accNo)
-        inventoryDictList = OPW00004Data["멀티데이터"]
-
-        return inventoryDictList
+        OPW00004 = self.request("OPW00004", **{"계좌번호": accNo})
+        return OPW00004.get("멀티데이터")
 
     def getInventoryCodes(self, accNo):
         """ 현재 보유중인 종목코드 반환 """
 
         inventoryDict = self.getInventoryDict(accNo)
-        codeList = inventoryDict["종목코드"]
-
-        return codeList
-
-    ##########################################
-    ############# utility 메서드 #############
-    ##########################################
-    ###############################################################
-    ###################### 기타 메서드 정의  #######################
-    ###############################################################
+        return [d.get("종목코드") for d in inventoryDict]
 
     def getCodeListByMarket(self, market):
         """시장 구분에 따른 종목코드의 목록을 List로 반환한다.
@@ -505,15 +161,16 @@ class DataFeeder:
         }
 
         Parameters
-        -------------------==
-        market: string
+        ----------
+        market: str
 
-        return
-        -------------------==
-        codeList: list -  조회한 시장에 소속된 종목 코드를 담은 list
+        Returns
+        ----------
+        codeList: list
+            조회한 시장에 소속된 종목 코드를 담은 list
         """
 
-        if not self.kiwoom.getConnectState():
+        if not self.kiwoom.connectState:
             raise KiwoomConnectError()
 
         if not isinstance(market, str):
@@ -525,12 +182,11 @@ class DataFeeder:
         codes = self.kiwoom.dynamicCall('GetCodeListByMarket("{}")'.format(market))
         return codes.split(";")
 
-    def getCodeList(self, *market):
-        """
-        여러 시장의 종목코드를 List 형태로 반환하는 헬퍼 메서드.
+    def getCodeList(self, *markets):
+        """ 여러 시장의 종목코드를 List 형태로 반환하는 헬퍼 메서드.
 
         Parameters
-        -------------------====
+        -----------
         market: array-like or strings - {
          '0': 장내,
          '3': ELW,
@@ -542,34 +198,30 @@ class DataFeeder:
          '10': 코스닥,
          '30': 제3시장
         }
-.
 
-        return
-        -------------------==
-        codeList: list -  조회한 시장에 소속된 종목 코드를 담은 list
+        Returns
+        ----------
+        list
         """
 
-        codeList = []
-
-        for m in market:
-            tempList = self.getCodeListByMarket(m)
-            codeList += tempList
-
+        codeList = list(map(self.getCodeListByMarket, markets))
         return codeList
 
     def getMasterCodeName(self, code):
         """ 종목코드의 한글명을 반환한다.
 
         Parameters
-        ----------==================
-        code: string - 종목코드
+        ----------
+        code: str
+            종목코드
 
-        return
-        ----------==================
-        name: string - 종목코드의 한글명
+        Returns
+        ----------
+        name: str
+            종목코드의 한글명
         """
 
-        if not self.kiwoom.getConnectState():
+        if not self.kiwoom.connectState:
             raise KiwoomConnectError()
 
         if not isinstance(code, str):
@@ -581,13 +233,18 @@ class DataFeeder:
     def getMarketByCode(self, code):
         """ 해당 종목이 상장된 시장정보 반환 """
 
-        if code in self.kspCodeList:
-            return "ksp"
+        if not hasattr(self, "kspCodeList"):
+            setattr(self, "kspCodeList", self.getCodeListByMarket("0"))
+            setattr(self, "kdqCodeList", self.getCodeListByMarket("10"))
+            setattr(self, "etfCodeList", self.getCodeListByMarket("8"))
 
-        elif code in self.kdqCodeList:
-            return "kdq"
+        if code in getattr(self, "kspCodeList"):
+            return "KSP"
 
-        elif code in self.etfCodeList:
+        if code in getattr(self, "kdqCodeList"):
+            return "KDQ"
+
+        if code in getattr(self, "etfCodeList"):
             return "ETF"
 
         return None
@@ -597,28 +254,27 @@ class DataFeeder:
         종목코드의 현재 상태를 반환한다.
 
         Parameters
-        ----------==================
+        ----------
         code: str
 
-        return
-        ----------=================
+        Returns
+        ----------
         stateList: list,  증거금비율, 종목상태(관리종목, 거래정지 등..)
         """
 
         if not isinstance(code, str):
             raise ParameterTypeError()
 
-        stateList = self.kiwoom.dynamicCall("GetMasterStockState(QString)", code).split(
-            "|"
-        )
-        return stateList
+        states = self.kiwoom.dynamicCall("GetMasterStockState(QString)", code)
+        return states.split("|")
 
-    def checkIfIssue(self, code):
+    def checkHasIssue(self, code):
         """ 해당 종목이 관리종목 혹은 거래정지에 해당하는지 확인하는 함수
 
-        return
-        =======================
-        isIssue: bool - True: 관리종목 or 거래정지종목
+        Returns
+        ----------
+        isIssue: bool
+            True: 관리종목 or 거래정지종목
         """
 
         stateList = self.kiwoom.getMasterStockState(code)
@@ -628,50 +284,27 @@ class DataFeeder:
 
         return False
 
-    def getCodesFromKRX(self, market="all"):
-        """ 상장기업 목록 (한국거래소) """
-
-        kspURL = "https://kind.krx.co.kr/corpgeneral/corpList.do?method=download&marketType=stockMkt&searchType=13"
-        ksdURL = "https://kind.krx.co.kr/corpgeneral/corpList.do?method=download&marketType=kdqMkt&searchType=13"
-
-        if market == "all":
-            kspCodeList = list(
-                pd.read_html(kspURL, header=0)[0]["종목코드"].map("{:06d}".format)
-            )
-            kdqCodeList = list(
-                pd.read_html(kdqURL, header=0)[0]["종목코드"].map("{:06d}".format)
-            )
-
-            codeList = kspCodeList + kdqCodeList
-
-        if market == "ksp":
-            codeList = list(
-                pd.read_html(kspURL, header=0)[0]["종목코드"].map("{:06d}".format)
-            )
-
-        if market == "kdq":
-            codeList = list(
-                pd.read_html(kdqURL, header=0)[0]["종목코드"].map("{:06d}".format)
-            )
-
-        codeList = [c for c in codeList if not "스팩" in c]  # 스팩 제거
-        return codeList
-
+    """
     ### logging 관련 매서드
     def showTradingSummary(self, date):
 
         # logging할 데이터
-        traSummaryDict = self.getOPT10074(self.accNo, date)
+        params = {
+            "계좌번호": "accNo",
+            "시작일자": date,
+            "종료일자": date,
+        }
+        traSummaryDict = self.request("OPT10074", **params)
 
         date = "-".join((date[:4], date[4:6], date[6:]))  # YYYY-MM-DD 꼴로 수정
 
-        totalBuy = int(traSummaryDict["총매수금액"])
-        totalSell = int(traSummaryDict["총매도금액"])
-        netProfit = int(traSummaryDict["실현손익"])
-        accoundDict = self.getOPW00004(self.accNo)
+        totalBuy = int(traSummaryDict.get("총매수금액"))
+        totalSell = int(traSummaryDict.get("총매도금액"))
+        netProfit = int(traSummaryDict.get("실현손익"))
+        accoundDict = self.getAccountDict(self.accNo)
         balanceEnd = int(accoundDict["account"]["추정예탁자산"].replace(",", ""))  # 마감 잔고
         balanceStart = balanceEnd - netProfit
-        stratRt = balanceEnd / balanceStart - 1
+        ret = balanceEnd / balanceStart - 1
 
         summaryDict = {
             "TABLE": "trading_summary",
@@ -681,17 +314,16 @@ class DataFeeder:
             "STRAT_NET_PROFIT": netProfit,
             "BALANCE_START": balanceStart,
             "BALANCE_END": balanceEnd,
-            "STRAT_RET_PCT": stratRt,
+            "STRAT_RET_PCT": ret,
         }
 
         self.kiwoom.logger.debug("=" * 70)
         self.kiwoom.logger.debug("{")
-
-        for key, val in loggingDict.items():
-
-            self.kiwoom.logger.debug('"{}" : "{}" ,'.format(key, val))
-
+        for k, v in summaryDict.items():
+            self.kiwoom.logger.debug('"{}" : "{}" ,'.format(k, v))
         self.kiwoom.logger.debug("}")
         self.kiwoom.logger.debug("=" * 70)
 
         return summaryDict
+    """
+

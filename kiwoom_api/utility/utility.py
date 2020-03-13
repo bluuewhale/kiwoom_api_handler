@@ -39,3 +39,9 @@ def str2float(x):
 
 def removeSign(x):
     return x.replace("+", "").replace("-", "").replace(",", "")
+
+
+def dictListToListDict(dl):
+    """ convert dictonary of lists to list of dictionaries"""
+
+    return [dict(zip(dl, t)) for t in zip(*dl.values())]

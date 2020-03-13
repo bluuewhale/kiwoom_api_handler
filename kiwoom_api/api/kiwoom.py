@@ -11,17 +11,30 @@ from PyQt5.QtCore import QEventLoop
 from kiwoom_api.api._errors import *
 from kiwoom_api.api._logger import Logger
 from kiwoom_api.api._config import *
-from kiwoom_api.utility.utility import removeSign
+from kiwoom_api.utility.utility import removeSign, dictListToListDict
 
 
 class Kiwoom(QAxWidget):
-    def __init__(self):
-        super().__init__()
+    """ 싱글톤 패턴 적용 """
 
+    __instance = None
+
+    @classmethod
+    def __getInstance(cls):
+        return cls.__instance
+
+    @classmethod
+    def instance(cls, *args, **kwargs):
+        cls.__instance = cls(*args, **kwargs)
+        cls.instance = cls.__getInstance
+        return cls.__instance
+
+    def __init__(self):
+
+        super().__init__()
         self.setControl("KHOPENAPI.KHOpenAPICtrl.1")
 
-        # Loop 변수
-        # 비동기 방식으로 동작되는 이벤트를 동기화(순서대로 동작) 시킬 때
+        # Loop 변수: 비동기 방식으로 동작되는 이벤트를 동기화
         self.logingLoop = None
         self.requestLoop = None
         self.orderLoop = None
@@ -158,12 +171,10 @@ class Kiwoom(QAxWidget):
 
         # OPTKWFID만 예외적으로 CommDataEx로 데이터를 호출함
         if trCode == "OPTKWFID":
-            keyList = getattr(TRKeys, trCode).get("멀티데이터")
-            dataList = self.getCommDataEx(trCode, rqName)
-            data = dict((k, v) for k, v in zip(keyList, dataList))
+            data = self.__getOPTKWFID(trCode, rqName)
+        else:
+            data = self.__getData(trCode, rqName)
 
-        # elif trCode == "OPT10004":
-        data = self.__getData(trCode, rqName)
         setattr(self, trCode, data)
 
         try:
@@ -213,11 +224,13 @@ class Kiwoom(QAxWidget):
     def commConnect(self):
         """ 로그인 시도 """
 
-        self.dynamicCall("CommConnect()")
-        self.loginLoop = QEventLoop()  # QEventLoop를 생성해서 비동기로 작업이 처리되는 것을 방지
-        self.loginLoop.exec_()  # eventConnect에서 loop를 종료시킨다.
+        if not self.connectState:
+            self.dynamicCall("CommConnect()")
+            self.loginLoop = QEventLoop()  # QEventLoop를 생성해서 비동기로 작업이 처리되는 것을 방지
+            self.loginLoop.exec_()  # eventConnect에서 loop를 종료시킨다.
 
-    def getConnectState(self):
+    @property
+    def connectState(self):
         """ 현재 접속상태를 반환합니다.
 
         Returns
@@ -228,7 +241,7 @@ class Kiwoom(QAxWidget):
 
         return self.dynamicCall("GetConnectState()")
 
-    def getLoginInfo(self, tag, isConnectState=False):
+    def getLoginInfo(self, tag):
         """ 사용자의 tag에 해당하는 정보를 반환한다.
         tag에 올 수 있는 값은 아래와 같다.
         ACCOUNT_CNT, ACCNO, USER_ID, USER_NAME, GetServerGubun
@@ -245,9 +258,8 @@ class Kiwoom(QAxWidget):
             입력한 tag에 대응하는 정보
         """
 
-        if not isConnectState:
-            if not self.getConnectState():  # 1: 연결, 0: 미연결
-                raise KiwoomConnectError()
+        if not self.connectState:  # 1: 연결, 0: 미연결
+            raise KiwoomConnectError()
 
         if tag not in [
             "ACCOUNT_CNT",
@@ -297,8 +309,11 @@ class Kiwoom(QAxWidget):
             key에 해당하는 값, ex) 88231524, 005930
         """
 
-        if not (isinstance(key, str) and isinstance(value, str)):
-            raise ParameterTypeError()
+        if not isinstance(key, str):
+            key = str(key)
+
+        if not isinstance(value, str):
+            value = str(value)
 
         self.dynamicCall("SetInputValue(QString, QString)", key, value)
 
@@ -324,7 +339,7 @@ class Kiwoom(QAxWidget):
             0(정상), -200(시세과부하), -201(조회전문작성 에러)
         """
 
-        if not self.getConnectState():
+        if not self.connectState:
             raise KiwoomConnectError()
 
         if not (
@@ -498,7 +513,7 @@ class Kiwoom(QAxWidget):
             0(정상), -200(시세과부하), -201(조회전문작성 에러)
         """
 
-        if not self.getConnectState():
+        if not self.connectState:
             raise KiwoomConnectError()
 
         if not (
@@ -592,7 +607,7 @@ class Kiwoom(QAxWidget):
         """
 
         # server connection check
-        if not self.getConnectState():
+        if not self.connectState:
             raise KiwoomConnectError()
 
         # API 제한 확인
@@ -711,6 +726,24 @@ class Kiwoom(QAxWidget):
                 tmpDict[key] = val
             data.append(tmpDict)
 
+        return data
+
+    def __getOPTKWFID(self, trCode, rqName):
+
+        data = {}
+
+        tmpData = self.getCommDataEx(trCode, rqName)
+        keyList = getattr(TRKeys, trCode).get("멀티데이터")
+
+        for key, ls in zip(keyList, zip(*tmpData)):
+
+            if key.endswith("호가") or key in getattr(TRKeys, "NOSIGNKEY"):
+                ls = map(removeSign, ls)
+
+            data[key] = list(ls)
+
+        data = dictListToListDict(data)  # dict of list to list of dict
+        data = {"멀티데이터": data}
         return data
 
 

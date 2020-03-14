@@ -8,15 +8,7 @@ from kiwoom_api.api._errors import *
 from kiwoom_api.api._config import *
 
 
-class Feeder:
-    def __init__(self, **kwargs):
-        pass
-
-    def request(self):
-        raise NotImplementedError
-
-
-class DataFeeder(Feeder):
+class DataFeeder:
     """ Data 수신과 관련된 class 입니다. Kiwoom 인스턴스(instance)를 생성자의 매개변수로 받습니다.
 
     TR과 관련된 자세한 사항은 [키움증권 공식 API 개발
@@ -25,22 +17,23 @@ class DataFeeder(Feeder):
 
     def __init__(self, kiwoom, **kwargs):
         self.kiwoom = kiwoom
-
         for k, v in kwargs:
             setattr(self, k, v)
 
     def request(self, trCode, **kwargs):
         trCode = trCode.upper()
 
+        if trCode == "OPTKWFID":
+            return self.__requestOPTKWFID(**kwargs)
+
         for k, v in kwargs.items():
             self.kiwoom.setInputValue(k, v)
 
         trName = getattr(TRName, trCode)
         self.kiwoom.commRqData(trName, trCode, 0, "0000")
-
         return getattr(self.kiwoom, trCode)
 
-    def requestOPTKWFID(
+    def __requestOPTKWFID(
         self, arrCode, next, codeCount, rqName="OPTKWFID", scrNo="0000", typeFlag=0
     ):
         """ 복수종목조회 메서드(관심종목조회 메서드라고도 함).

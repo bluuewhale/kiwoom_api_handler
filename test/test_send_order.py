@@ -1,42 +1,56 @@
 import os
 import sys
+import unittest
 
-sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
 from PyQt5.QtWidgets import QApplication
 
-from kiwoom_api_handler.api import Kiwoom, DataFeeder, Executor
+from kiwoom_api.api import Kiwoom, DataFeeder, Executor
 
 
-def testSendOrder():
+def initQt(func):
+    @wraps(func)
+    def inner(self, *args, **kwargs):
+        app = QApplication(sys.argv)
+        kiwoom = Kiwoom.instance()
+        kiwoom.commConnect()
+        self.feeder = DataFeeder(kiwoom)
 
-    app = QApplication(sys.argv)
+        func(self, *args, **kwargs)
 
-    # API 로그인
-    broker = Kiwoom()
-    broker.commConnect()
+    return inner
 
-    feeder = DataFeeder(broker)
-    executor = Executor(broker)
 
-    accNo = feeder.getAccNo()
-    code = "005930"
+class OrderTest(unittest.TestCase):
+    def testSendOrder(self):
 
-    orderSpecDict = executor.createOrderSpec(
-        rqName="test",
-        scrNo="0000",
-        accNo=accNo,
-        orderType=1,  # 신규매수
-        code=code,
-        qty=1,
-        price=0,
-        hogaType="03",
-        originOrderNo="",
-    )
+        app = QApplication(sys.argv)
 
-    executor.sendOrder(orderSpecDict)
+        # API 로그인
+        kiwoom = Kiwoom()
+        kiwoom.commConnect()
+
+        feeder = DataFeeder(kiwoom)
+        executor = Executor(kiwoom)
+
+        accNo = feeder.getAccNo()
+        code = "005930"
+
+        orderSpecDict = executor.createOrderSpec(
+            rqName="test",
+            scrNo="0000",
+            accNo=accNo,
+            orderType=1,  # 신규매수
+            code=code,
+            qty=1,
+            price=0,
+            hogaType="03",
+            originOrderNo="",
+        )
+        executor.sendOrder(orderSpecDict)
 
 
 if __name__ == "__main__":
 
-    testSendOrder()
+    unittest.main()

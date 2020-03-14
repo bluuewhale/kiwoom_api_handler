@@ -3,7 +3,7 @@ from functools import wraps
 import os
 import sys
 
-sys.path.append(r"C:\Users\koko8\Documents\git-project\kiwoom_api")
+sys.path.insert(0, r"C:\Users\koko8\Documents\git-project\kiwoom_api")
 import unittest
 
 from PyQt5.QtWidgets import QApplication

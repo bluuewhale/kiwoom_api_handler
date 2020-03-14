@@ -166,21 +166,18 @@ class Kiwoom(QAxWidget):
         except AttributeError:
             pass
 
-        if not hasattr(TRKeys, trCode):
-            raise NotImplementedError("Not Implemented TR")
+        if not "ORD" in trCode:  # tr요청인 경우에만 데이터 반환
+            if trCode == "OPTKWFID":
+                data = self.__getOPTKWFID(trCode, rqName)
+            else:
+                data = self.__getData(trCode, rqName)
 
-        # OPTKWFID만 예외적으로 CommDataEx로 데이터를 호출함
-        if trCode == "OPTKWFID":
-            data = self.__getOPTKWFID(trCode, rqName)
-        else:
-            data = self.__getData(trCode, rqName)
+            setattr(self, trCode, data)
 
-        setattr(self, trCode, data)
-
-        try:
-            self.requestLoop.exit()
-        except AttributeError:
-            pass
+            try:
+                self.requestLoop.exit()
+            except AttributeError:
+                pass
 
     def eventReceiveChejanData(self, gubun, itemCnt, fidList):
         """ 주문 접수/확인 수신시 이벤트
@@ -352,7 +349,6 @@ class Kiwoom(QAxWidget):
 
         # API 제한 확인
         self.requestDelayCheck.checkDelay()
-        self.logger.debug("{}  commRqData {}".format(dt.now(), rqName))
 
         returnCode = self.dynamicCall(
             "CommRqData(QString, QString, int, QString)",
@@ -371,6 +367,7 @@ class Kiwoom(QAxWidget):
             raise KiwoomProcessingError()
 
         # 루프 생성: eventReceiveTrData() 메서드에서 루프를 종료시킨다.
+        self.logger.debug("{}  commRqData {}".format(dt.now(), rqName))
         self.requestLoop = QEventLoop()
         self.requestLoop.exec_()
 
@@ -626,25 +623,27 @@ class Kiwoom(QAxWidget):
         ):
             raise ParameterTypeError()
 
-        try:
-            orderType = OrderType.TYPE[orderType]
-        except KeyError:
-            errMsg = "orderType must be in [1, 2, 3, 4, 5, 6], but got {}".format(
-                orderType
-            )
-            raise ParameterValueError(errMsg)
+        # try:
+        #    orderType = getattr(OrderType, "TYPE").get(orderType)
+        # except KeyError:
+        #    errMsg = "orderType must be in [1, 2, 3, 4, 5, 6], but got {}".format(
+        #        orderType
+        #    )
+        #    raise ParameterValueError(errMsg)
 
         returnCode = self.dynamicCall(
             "SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
-            rqName,
-            scrNo,
-            accNo,
-            orderType,
-            code,
-            qty,
-            price,
-            hogaType,
-            originOrderNo,
+            [
+                rqName,
+                scrNo,
+                accNo,
+                orderType,
+                code,
+                qty,
+                price,
+                hogaType,
+                originOrderNo,
+            ],
         )
 
         if returnCode != 0:
@@ -654,8 +653,9 @@ class Kiwoom(QAxWidget):
                 )
             )
 
+        orderTypeDetail = getattr(OrderType, "TYPE").get(orderType)
         self.logger.info(
-            f"{dt.now()} sendOrder() : Code:{code}, Price:{price}, Qty:{qty}, orderType={orderType}"
+            f"{dt.now()} sendOrder() : Code:{code}, Price:{price}, Qty:{qty}, orderType={orderTypeDetail}"
         )
 
         # receiveTrData() 에서 루프종료

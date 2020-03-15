@@ -228,8 +228,8 @@ class Kiwoom(QAxWidget):
 
         if not self.connectState:
             self.dynamicCall("CommConnect()")
-            self.loginLoop = QEventLoop()  # QEventLoop를 생성해서 비동기로 작업이 처리되는 것을 방지
-            self.loginLoop.exec_()  # eventConnect에서 loop를 종료시킨다.
+            self.loginLoop = QEventLoop()
+            self.loginLoop.exec_()  # eventConnect에서 loop를 종료
 
     @property
     def connectState(self):
@@ -630,7 +630,8 @@ class Kiwoom(QAxWidget):
 
         # Error: code not supported
         if not code in self.codes:
-            msg = f"Code not supported: {code}"
+
+            msg = f"Code not supported: {code} {self.codes}"
             self.orderResponse.update({"msg": msg})
             raise KiwoomProcessingError("ERROR: sendOrder() : {}".format(msg))
 
@@ -782,16 +783,13 @@ class Kiwoom(QAxWidget):
 
     @property
     def codes(self):
-        codes = []
+        if not self.connectState:
+            raise KiwoomConnectError()
 
-        if self.connectState:
-            codes += [
-                self.__getCodeListByMarket("0")  # KOSPI
-                + self.__getCodeListByMarket("10")  # KOSDAQ
-                + self.__getCodeListByMarket("8")  # ETF
-            ]
-
-        return []
+        codes = self.__getCodeListByMarket("0")  # KOSPI
+        codes += self.__getCodeListByMarket("10")  # KOSDAQ
+        codes += self.__getCodeListByMarket("8")  # ETF
+        return codes
 
     def __killOldProcess(self):
 

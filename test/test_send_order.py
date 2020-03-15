@@ -35,9 +35,11 @@ class OrderTest(unittest.TestCase):
             hogaType="03",
             originOrderNo="",
         )
-        executor.sendOrder(**orderSpecDict)
+        orderResponse = executor.sendOrder(**orderSpecDict)
 
-    """
+        print(orderResponse)
+
+    """ 
     def testSendOrderFail(self):
 
         app = QApplication(sys.argv)

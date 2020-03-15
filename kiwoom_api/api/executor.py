@@ -88,3 +88,6 @@ class Executor:
         self.kiwoom.sendOrder(
             rqName, scrNo, accNo, orderType, code, qty, price, hogaType, originOrderNo,
         )
+
+        return getattr(self.kiwoom, "orderResponse")
+

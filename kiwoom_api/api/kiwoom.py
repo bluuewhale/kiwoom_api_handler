@@ -631,7 +631,7 @@ class Kiwoom(QAxWidget):
         # Error: code not supported
         if not code in self.codes:
 
-            msg = f"Code not supported: {code} {self.codes}"
+            msg = f"Code not supported: {code}"
             self.orderResponse.update({"msg": msg})
             raise KiwoomProcessingError("ERROR: sendOrder() : {}".format(msg))
 

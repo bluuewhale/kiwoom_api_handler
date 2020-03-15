@@ -2,16 +2,17 @@ from collections import deque, defaultdict
 from datetime import datetime as dt
 import os
 import time
+import signal
 
 import pandas as pd
 from PyQt5.QAxContainer import QAxWidget
-from PyQt5.QtCore import QEventLoop
+from PyQt5.QtCore import QEventLoop, QTimer
 
 # from kiwoom_api.utility import *
 from kiwoom_api.api._errors import *
 from kiwoom_api.api._logger import Logger
 from kiwoom_api.api._config import *
-from kiwoom_api.utility.utility import removeSign, dictListToListDict
+from kiwoom_api.utility.utility import removeSign, dictListToListDict, readTxt, saveTxt
 
 
 class Kiwoom(QAxWidget):
@@ -33,6 +34,9 @@ class Kiwoom(QAxWidget):
 
         super().__init__()
         self.setControl("KHOPENAPI.KHOpenAPICtrl.1")
+
+        # old process kill
+        self.__killOldProcess()
 
         # Loop 변수: 비동기 방식으로 동작되는 이벤트를 동기화
         self.logingLoop = None
@@ -106,21 +110,12 @@ class Kiwoom(QAxWidget):
         msg: str 
             서버로 부터의 메시지
         """
+        if hasattr(self, "orderResponse"):
+            self.orderResponse.update({"msg": msg})
 
         self.logger.debug(msg)
 
-    def eventReceiveTrData(
-        self,
-        scrNo,
-        rqName,
-        trCode,
-        recordName,
-        inquiry,
-        deprecated1,
-        deprecated2,
-        deprecated3,
-        deprecated4,
-    ):
+    def eventReceiveTrData(self, scrNo, rqName, trCode, recordName, inquiry, **kwargs):
         """
         TR 수신 이벤트시 실행되는 매서드
 
@@ -145,39 +140,50 @@ class Kiwoom(QAxWidget):
             조회("0" or "": 남은 데이터 없음, '2': 남은 데이터 있음)
         """
 
-        self.logger.debug("=" * 70)
-        self.logger.debug("{")
-        self.logger.debug('"TIME" : "{}",'.format(dt.now()))
-        self.logger.debug('"BASC_DT" : "{}",'.format(dt.now().strftime("%Y%m%d")))
-        self.logger.debug('"EVENT": "eventReceiveTrData",')
-        self.logger.debug('"REQUEST_NAME": "{}",'.format(rqName))
-        self.logger.debug('"TR_CODE": "{}",'.format(trCode))
-        self.logger.debug(
-            '"ORDER_NO": "{}",'.format(self.getCommData(trCode, "", 0, "주문번호"))
-        )
-        self.logger.debug("}")
-        self.logger.debug("=" * 70)
+        # 주문 이벤트인 경우
+        if "ORD" in trCode:
+
+            # 주문번호 획득, 주문번호가 존재하면 주문 성공
+            orderNo = self.getCommData(trCode, "", 0, "주문번호")
+            self.orderResponse.update({"orderNo": orderNo})
+
+            # orderLoop 탈출
+            try:
+                self.orderLoop.exit()
+            except AttributeError:
+                pass
+            finally:
+                self.logger.debug(self.orderResponse)
+                return
+
+        # TR 이벤트인 경우, orderResponse를 삭제
+        if hasattr(self, "orderResponse"):
+            delattr(self, "orderResponse")
+
+        # TR Data 수신
+        if trCode == "OPTKWFID":
+            data = self.__getOPTKWFID(trCode, rqName)
+        else:
+            data = self.__getData(trCode, rqName)
+        setattr(self, trCode, data)
 
         self.isNext = 0 if ((inquiry == "0") or (inquiry == "")) else 2  # 추가조회 여부
 
-        # 주문 이벤트인 경우, loop에서 나옴
+        # TR loop 탈출
         try:
-            self.orderLoop.exit()
+            self.requestLoop.exit()
         except AttributeError:
             pass
 
-        if not "ORD" in trCode:  # tr요청인 경우에만 데이터 반환
-            if trCode == "OPTKWFID":
-                data = self.__getOPTKWFID(trCode, rqName)
-            else:
-                data = self.__getData(trCode, rqName)
-
-            setattr(self, trCode, data)
-
-            try:
-                self.requestLoop.exit()
-            except AttributeError:
-                pass
+        # TR 이벤트 logging
+        eventDetail = {
+            "TIME": dt.now().strftime("%Y-%m-%d %H:%M:%S.%f"),
+            "BASC_DT": dt.now().strftime("%Y%m%d"),
+            "EVENT": "eventReceiveTrData",
+            "REQUEST_NAME": rqName,
+            "TR_CODE": trCode,
+        }
+        self.logger.debug(eventDetail)
 
     def eventReceiveChejanData(self, gubun, itemCnt, fidList):
         """ 주문 접수/확인 수신시 이벤트
@@ -194,12 +200,12 @@ class Kiwoom(QAxWidget):
         """
 
         # Logging
-        self.logger.debug("=" * 70)
-        self.logger.debug("{")
-        self.logger.debug('"TIME" : "{}",'.format(dt.now()))
-        self.logger.debug('"EVENT": "eventReceiveChejanData",')
-        self.logger.debug('"GUBUN" : "{}", '.format(gubun))  # '0': 주문접수/주문체결 '1':잔고통보
-        self.logger.debug('"BASC_DT" : "{}", '.format(dt.now().strftime("%Y%m%d")))
+        chejanDetail = {
+            "TIME": dt.now().strftime("%Y%m%d %H:%M%S.%f"),
+            "EVENT": "eventReceiveChejanData",
+            "GUBUN": getattr(ChejanGubun, "TYPE").get(gubun),
+            "BASC_DT": dt.now().strftime("%Y%m%d"),
+        }
 
         fids = fidList.split(";")
         for fid in fids:
@@ -209,10 +215,9 @@ class Kiwoom(QAxWidget):
                 continue
 
             data = self.getChejanData(fid).strip()
-            self.logger.debug('"{}": "{}",'.format(fidName, data))
+            chejanDetail[fidName] = data
 
-        self.logger.debug("}")
-        self.logger.debug("=" * 70)
+        self.logger.debug(chejanDetail)
 
     ###############################################################
     #################### 로그인 관련 메서드   ######################
@@ -258,13 +263,8 @@ class Kiwoom(QAxWidget):
         if not self.connectState:  # 1: 연결, 0: 미연결
             raise KiwoomConnectError()
 
-        if tag not in [
-            "ACCOUNT_CNT",
-            "ACCNO",
-            "USER_ID",
-            "USER_NAME",
-            "GetServerGubun",
-        ]:
+        tags = ["ACCOUNT_CNT", "ACCNO", "USER_ID", "USER_NAME", "GetServerGubun"]
+        if tag not in tags:
             raise ParameterValueError()
 
         if tag == "GetServerGubun":
@@ -545,8 +545,9 @@ class Kiwoom(QAxWidget):
         # logging
         self.logger.debug("{}  commKwRqData {}".format(dt.now(), rqName))
 
-        # 루프 생성: receiveTrData() 메서드에서 루프를 종료시킨다.
+        # eventReceiveTrData()에서 loop 종료 or timeout
         self.requestLoop = QEventLoop()
+        QTimer.singleShot(1000, self.requestLoop.exit)  # timout in 1000 ms
         self.requestLoop.exec_()
 
     ###############################################################
@@ -602,64 +603,59 @@ class Kiwoom(QAxWidget):
             원주문번호(신규주문에는 공백, 정정및 취소주문시 원주문번호를 입력합니다.)
 
         """
+        orderParams = {
+            "rqName": rqName,
+            "scrNo": scrNo,
+            "accNo": accNo,
+            "orderType": orderType,
+            "code": code,
+            "qty": qty,
+            "price": price,
+            "hogaType": hogaType,
+            "originOrderNo": originOrderNo,
+        }
+
+        # order response data
+        self.orderResponse = {
+            "time": dt.now().strftime("%Y-%m-%d %H:%M:%S.%f"),
+            "orderNo": "",
+        }
+        self.orderResponse.update(orderParams)
 
         # server connection check
         if not self.connectState:
-            raise KiwoomConnectError()
+            msg = "Server not connected"
+            self.orderResponse.update({"msg": msg})
+            raise KiwoomConnectError(msg)
+
+        # Error: code not supported
+        if not code in self.codes:
+            msg = f"Code not supported: {code}"
+            self.orderResponse.update({"msg": msg})
+            raise KiwoomProcessingError("ERROR: sendOrder() : {}".format(msg))
 
         # API 제한 확인
         self.orderDelayCheck.checkDelay()
 
-        if not (
-            isinstance(rqName, str)
-            and isinstance(scrNo, str)
-            and isinstance(accNo, str)
-            and isinstance(orderType, int)
-            and isinstance(code, str)
-            and isinstance(qty, int)
-            and isinstance(price, int)
-            and isinstance(hogaType, str)
-            and isinstance(originOrderNo, str)
-        ):
-            raise ParameterTypeError()
-
-        # try:
-        #    orderType = getattr(OrderType, "TYPE").get(orderType)
-        # except KeyError:
-        #    errMsg = "orderType must be in [1, 2, 3, 4, 5, 6], but got {}".format(
-        #        orderType
-        #    )
-        #    raise ParameterValueError(errMsg)
-
-        returnCode = self.dynamicCall(
-            "SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
-            [
-                rqName,
-                scrNo,
-                accNo,
-                orderType,
-                code,
-                qty,
-                price,
-                hogaType,
-                originOrderNo,
-            ],
-        )
-
-        if returnCode != 0:
-            raise KiwoomProcessingError(
-                "ERROR: sendOrder() : {}".format(
-                    getattr(ReturnCode, "CAUSE").get(returnCode)
-                )
+        # 주문 전송
+        try:
+            returnCode = self.dynamicCall(
+                "SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)",
+                list(orderParams.values()),
             )
 
-        orderTypeDetail = getattr(OrderType, "TYPE").get(orderType)
-        self.logger.info(
-            f"{dt.now()} sendOrder() : Code:{code}, Price:{price}, Qty:{qty}, orderType={orderTypeDetail}"
-        )
+        except Exception as msg:
+            self.orderResponse.update({"msg": msg})
+            raise KiwoomProcessingError("ERROR: sendOrder() : {}".format(msg))
 
-        # receiveTrData() 에서 루프종료
+        if returnCode != 0:
+            msg = getattr(ReturnCode, "CAUSE").get(returnCode)
+            self.orderResponse.update({"msg": msg})
+            raise KiwoomProcessingError("ERROR: sendOrder() : {}".format(msg))
+
+        # eventReceiveTrData() 에서 루프종료 or timeout
         self.orderLoop = QEventLoop()
+        QTimer.singleShot(1000, self.orderLoop.exit)  # timout in 1000 ms
         self.orderLoop.exec_()
 
     def getChejanData(self, fid):
@@ -745,6 +741,74 @@ class Kiwoom(QAxWidget):
         data = dictListToListDict(data)  # dict of list to list of dict
         data = {"멀티데이터": data}
         return data
+
+    def __getCodeListByMarket(self, market):
+        """시장 구분에 따른 종목코드의 목록을 List로 반환한다.
+
+        market에 올 수 있는 값은 아래와 같다.
+        {
+         '0': 장내,
+         '3': ELW,
+         '4': 뮤추얼펀드,
+         '5': 신주인수권,
+         '6': 리츠,
+         '8': ETF,
+         '9': 하이일드펀드,
+         '10': 코스닥,
+         '30': 제3시장
+        }
+
+        Parameters
+        ----------
+        market: str
+
+        Returns
+        ----------
+        codeList: list
+            조회한 시장에 소속된 종목 코드를 담은 list
+        """
+
+        if not self.connectState:
+            raise KiwoomConnectError()
+
+        if not isinstance(market, str):
+            raise ParameterTypeError()
+
+        if market not in ["0", "3", "4", "5", "6", "8", "9", "10", "30"]:
+            raise ParameterValueError()
+
+        codes = self.dynamicCall('GetCodeListByMarket("{}")'.format(market))
+        return codes.split(";")
+
+    @property
+    def codes(self):
+        codes = []
+
+        if self.connectState:
+            codes += [
+                self.__getCodeListByMarket("0")  # KOSPI
+                + self.__getCodeListByMarket("10")  # KOSDAQ
+                + self.__getCodeListByMarket("8")  # ETF
+            ]
+
+        return []
+
+    def __killOldProcess(self):
+
+        path = os.path.abspath("__file__")
+        filePath = os.path.join(path, "pid.txt")
+
+        try:
+            last_pid = int(readTxt(filePath))
+
+        except FileNotFoundError:
+            return
+
+        cur_pid = os.getpid()
+
+        if cur_pid != last_pid:
+            os.kill(last_pid, signal.SIGTERM)
+            saveTxt(filePath, cur_pid)
 
 
 class APIDelayCheck:

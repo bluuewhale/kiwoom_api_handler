@@ -9,21 +9,8 @@ from PyQt5.QtWidgets import QApplication
 from kiwoom_api.api import Kiwoom, DataFeeder, Executor
 
 
-def initQt(func):
-    @wraps(func)
-    def inner(self, *args, **kwargs):
-        app = QApplication(sys.argv)
-        kiwoom = Kiwoom.instance()
-        kiwoom.commConnect()
-        self.feeder = DataFeeder(kiwoom)
-
-        func(self, *args, **kwargs)
-
-    return inner
-
-
 class OrderTest(unittest.TestCase):
-    def testSendOrder(self):
+    def testSendOrderSuccess(self):
 
         app = QApplication(sys.argv)
 
@@ -48,7 +35,36 @@ class OrderTest(unittest.TestCase):
             hogaType="03",
             originOrderNo="",
         )
-        executor.sendOrder(orderSpecDict)
+        executor.sendOrder(**orderSpecDict)
+
+    """
+    def testSendOrderFail(self):
+
+        app = QApplication(sys.argv)
+
+        # API 로그인
+        kiwoom = Kiwoom()
+        kiwoom.commConnect()
+
+        feeder = DataFeeder(kiwoom)
+        executor = Executor(kiwoom)
+
+        accNo = feeder.getAccNo()
+        code = 123144
+
+        orderSpecDict = executor.createOrderSpec(
+            rqName="test",
+            scrNo="0000",
+            accNo=accNo,
+            orderType=1,  # 신규매수
+            code=code,
+            qty=1,
+            price=0,
+            hogaType="03",
+            originOrderNo="",
+        )
+        executor.sendOrder(**orderSpecDict)
+    """
 
 
 if __name__ == "__main__":

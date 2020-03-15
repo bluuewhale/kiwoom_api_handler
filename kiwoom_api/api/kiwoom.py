@@ -243,6 +243,10 @@ class Kiwoom(QAxWidget):
 
         return self.dynamicCall("GetConnectState()")
 
+    @property
+    def accNo(self):
+        return self.getLoginInfo("ACCNO").rstrip(";")
+
     def getLoginInfo(self, tag):
         """ 사용자의 tag에 해당하는 정보를 반환한다.
         tag에 올 수 있는 값은 아래와 같다.
@@ -311,6 +315,9 @@ class Kiwoom(QAxWidget):
 
         if not isinstance(value, str):
             value = str(value)
+
+        if (key == "계좌번호") and (value != self.accNo):
+            raise KiwoomProcessingError("Invalid AccNo")
 
         self.dynamicCall("SetInputValue(QString, QString)", key, value)
 

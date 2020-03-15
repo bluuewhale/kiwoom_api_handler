@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="kiwoom_api_handler",
-    version="1.0.5",
+    version="1.0.7",
     description="a package for hanlding Kiwoom OPEN API+ ActiveX Control with python",
     author="Donghyung Ko",
     author_email="koko8624@gmail.com",

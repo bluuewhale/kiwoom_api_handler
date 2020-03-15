@@ -1,6 +1,7 @@
 from datetime import datetime as dt
 from functools import wraps
 import os
+from pprint import pprint
 import sys
 
 sys.path.insert(0, r"C:\Users\koko8\Documents\git-project\kiwoom_api")
@@ -32,26 +33,19 @@ class TestDataFeeder(unittest.TestCase):
 
     #! TODO: 유닛테스트 코드 작성
 
-    def printData(self, data):
-        if data.get("싱글데이터", False):
-            print(data.get("싱글데이터"))
-
-        if data.get("멀티데이터", False):
-            print(data.get("멀티데이터")[0])
-
     @initQt
     def testOPT10004(self, *args, **kwargs):
 
         params = {"종목코드": self.code}
         data = self.feeder.request(trCode="OPT10004", **params)
-        print(data)
+        pprint(data)
 
     @initQt
     def testOPT10005(self):
 
         params = {"종목코드": self.code}
         data = self.feeder.request(trCode="OPT10005", **params)
-        print(data)
+        pprint(data)
 
     @initQt
     def testOPT10059(self):
@@ -65,25 +59,25 @@ class TestDataFeeder(unittest.TestCase):
         }
 
         data = self.feeder.request(trCode="OPT10059", **params)
-        print(data)
+        pprint(data)
 
     @initQt
     def testOPT10074(self):
 
         params = {
-            "계좌번호": self.feeder.getAccNo(),
+            "계좌번호": self.feeder.accNo,
             "시작일자": self.date,
             "종료일자": self.date,
         }
 
         data = self.feeder.request(trCode="OPT10074", **params)
-        print(data)
+        pprint(data)
 
     @initQt
     def testOPT10075(self):
 
         params = {
-            "계좌번호": self.feeder.getAccNo(),
+            "계좌번호": self.feeder.accNo,
             "전체종목구분": "0",
             "매매구분": "0",
             "종목코드": self.code,
@@ -91,7 +85,7 @@ class TestDataFeeder(unittest.TestCase):
         }
 
         data = self.feeder.request(trCode="OPT10075", **params)
-        print(data)
+        pprint(data)
 
     @initQt
     def testOPT10080(self):
@@ -103,7 +97,7 @@ class TestDataFeeder(unittest.TestCase):
         }
 
         data = self.feeder.request(trCode="OPT10080", **params)
-        print(data)
+        pprint(data)
 
     @initQt
     def testOPTKWFID(self):
@@ -114,102 +108,102 @@ class TestDataFeeder(unittest.TestCase):
             "codeCount": 2,
         }
         data = self.feeder.requestOPTKWFID(**params)
-        print(data)
+        pprint(data)
 
     @initQt
     def testOPW00001(self):
 
         params = {
-            "계좌번호": self.feeder.getAccNo(),
+            "계좌번호": self.feeder.accNo,
             "비밀번호": "",
             "비밀번호입력매체구분": "00",
             "조회구분": "2",
         }
         data = self.feeder.request(trCode="OPW00001", **params)
-        print(data)
+        pprint(data)
 
     @initQt
     def testOPW00004(self):
 
         params = {
-            "계좌번호": self.feeder.getAccNo(),
+            "계좌번호": self.feeder.accNo,
             "비밀번호": "",
             "상장폐지조회구분": "0",
             "비밀번호입력매체구분": "00",
         }
         data = self.feeder.request(trCode="OPW00004", **params)
-        print(data)
+        pprint(data)
 
     @initQt
     def testOPW00007(self):
 
         params = {
             "주문일자": "202003013",
-            "계좌번호": self.feeder.getAccNo(),
+            "계좌번호": self.feeder.accNo,
             "비밀번호": "",
             "비밀번호입력매체구분": "00",
             "조회구분": "1",
         }
         data = self.feeder.request(trCode="OPW00007", **params)
-        print(data)
+        pprint(data)
 
     # unility methods
     @initQt
     def testGetDeposit(self):
-        accNo = self.feeder.getAccNo()
+        accNo = self.feeder.accNo
         data = self.feeder.getDeposit(accNo)
-        print(data)
+        pprint(data)
 
     @initQt
     def testGetUnExOrders(self):
-        accNo = self.feeder.getAccNo()
+        accNo = self.feeder.accNo
         data = self.feeder.getUnExOrders(accNo)
-        print(data)
+        pprint(data)
 
     @initQt
     def testGetAccountDict(self):
-        accNo = self.feeder.getAccNo()
+        accNo = self.feeder.accNo
         data = self.feeder.getAccountDict(accNo)
-        print(data)
+        pprint(data)
 
     @initQt
     def testGetInventoryDict(self):
-        accNo = self.feeder.getAccNo()
+        accNo = self.feeder.accNo
         data = self.feeder.getInventoryDict(accNo)
-        print(data)
+        pprint(data)
 
     @initQt
     def testGetInventoryCodes(self):
-        accNo = self.feeder.getAccNo()
+        accNo = self.feeder.accNo
         data = self.feeder.getInventoryCodes(accNo)
-        print(data)
+        pprint(data)
 
     @initQt
     def testGetCodeListByMarket(self):
 
         market = "0"
         data = self.feeder.getCodeListByMarket(market)
-        print(data)
+        pprint(data)
 
     @initQt
     def testGetMasterCodeName(self):
 
         data = self.feeder.getMasterCodeName(self.code)
-        print(data)
+        pprint(data)
         self.assertEqual(data, "삼성전자")
 
     @initQt
     def testGetMarketByCode(self):
 
         data = self.feeder.getMarketByCode(self.code)
-        print(data)
+        pprint(data)
         self.assertEqual(data, "KSP")
 
     @initQt
     def testGetMasterStockState(self):
 
         data = self.feeder.getMasterStockState(self.code)
-        print(data)
+        pprint(data)
 
 
 if __name__ == "__main__":

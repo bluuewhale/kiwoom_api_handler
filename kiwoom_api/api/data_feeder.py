@@ -83,8 +83,9 @@ class DataFeeder:
     ###### utility methods ######
     #############################
 
-    def getAccNo(self):
-        return self.kiwoom.getLoginInfo("ACCNO").rstrip(";")
+    @property
+    def accNo(self):
+        return self.kiwoom.accNo
 
     def getDeposit(self, accNo):
         """ D+2 추정예수금 반환 

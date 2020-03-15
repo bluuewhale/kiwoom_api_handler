@@ -319,7 +319,7 @@ class Kiwoom(QAxWidget):
         if (key == "계좌번호") and (value != self.accNo):
             raise KiwoomProcessingError("ERROR: Invalid 계좌번호")
 
-        if (key == '종목코드') and (value not in self.codes):
+        if (key == "종목코드") and (value not in self.codes):
             raise KiwoomProcessingError("ERROR: Invalid 종목코드")
 
         self.dynamicCall("SetInputValue(QString, QString)", key, value)

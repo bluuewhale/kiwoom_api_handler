@@ -144,7 +144,7 @@ if __name__ == "__main__":
         originOrderNo="",
     )
 
-     executor.sendOrder(orderSpecDict) # 삼성전자 1주 신규매수(시장가) 주문 제출
+     executor.sendOrder(**orderSpecDict) # 삼성전자 1주 신규매수(시장가) 주문 제출
 ```
 
 #### Help and Future Support

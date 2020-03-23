@@ -36,7 +36,7 @@ class Kiwoom(QAxWidget):
         self.setControl("KHOPENAPI.KHOpenAPICtrl.1")
 
         # old process kill
-        self.__killOldProcess()
+        # self.__killOldProcess()
 
         # Loop 변수: 비동기 방식으로 동작되는 이벤트를 동기화
         self.logingLoop = None
@@ -870,4 +870,3 @@ class APIDelayCheck:
 
         # 새로운 request 시간 기록
         self.rqHistory.append(time.time())
-

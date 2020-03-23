@@ -801,6 +801,7 @@ class Kiwoom(QAxWidget):
         codes += self.__getCodeListByMarket("8")  # ETF
         return codes
 
+    """
     def __killOldProcess(self):
 
         path = os.path.abspath("__file__")
@@ -817,6 +818,7 @@ class Kiwoom(QAxWidget):
         if cur_pid != last_pid:
             os.kill(last_pid, signal.SIGTERM)
             saveTxt(filePath, cur_pid)
+        """
 
 
 class APIDelayCheck:

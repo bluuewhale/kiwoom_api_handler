@@ -13,7 +13,7 @@ def test_all():
     app = QApplication(sys.argv)
 
     # API 로그인
-    broker = Kiwoom()
+    broker = Kiwoom.instance()
     broker.commConnect()
 
     feeder = DataFeeder(broker)

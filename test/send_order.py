@@ -1,7 +1,9 @@
 from PyQt5.QtWidgets import QApplication
 import os
+from pprint import pprint
 import sys
 import unittest
+
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
@@ -22,7 +24,7 @@ class OrderTest(unittest.TestCase):
         feeder = DataFeeder(kiwoom)
         executor = Executor(kiwoom)
 
-        accNo = feeder.getAccNo()
+        accNo = feeder.accNo
         code = "005930"
 
         orderSpecDict = executor.createOrderSpec(
@@ -38,7 +40,7 @@ class OrderTest(unittest.TestCase):
         )
         orderResponse = executor.sendOrder(**orderSpecDict)
 
-        print(orderResponse)
+        pprint(orderResponse)
 
     """ 
     def testSendOrderFail(self):

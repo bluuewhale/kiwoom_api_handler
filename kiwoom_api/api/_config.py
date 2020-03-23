@@ -13,7 +13,7 @@ class OrderType(object):
 
 class ChejanGubun(object):
 
-    TYPE: {"0": "주문접수/주문체결", "1": "잔고통보", "3": "특이신호"}
+    TYPE= {"0": "주문접수/주문체결", "1": "잔고통보", "3": "특이신호"}
 
 
 class ReturnCode(object):

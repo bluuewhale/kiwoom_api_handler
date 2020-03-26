@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 from kiwoom_api.api._errors import *
-from kiwoom_api.api._config import *
+from kiwoom_api.config.api import *
 
 
 class DataFeeder:

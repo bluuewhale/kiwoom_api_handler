@@ -11,10 +11,10 @@ from PyQt5.QtCore import QEventLoop, QTimer
 # from kiwoom_api.utility import *
 from kiwoom_api.api._errors import *
 from kiwoom_api.api._logger import Logger
-from kiwoom_api.api._config import *
-from kiwoom_api.utility.utility import removeSign, dictListToListDict, readTxt, saveTxt
-from kiwoom_api.api._api_config import DatabaseConfig
+from kiwoom_api.config.api import *
+from kiwoom_api.config.db import DBConfig
 from kiwoom_api.api.mysql import MySql
+from kiwoom_api.utility.utility import removeSign, dictListToListDict, readTxt, saveTxt
 
 class Kiwoom(QAxWidget):
     """ 싱글톤 패턴 적용 """
@@ -223,8 +223,7 @@ class Kiwoom(QAxWidget):
 
                 # DB에 체결내역 저장
                 try:
-                    table = 'order_executed'
-                    config = getattr(DatabaseConfig, 'config')
+                    config = getattr(DBConfig, 'config')
                     mysql = MySql(**config)
                     mysql.insert(table=table, **chejanDict)
                 except Exception as e:

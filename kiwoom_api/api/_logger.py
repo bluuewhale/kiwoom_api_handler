@@ -60,4 +60,6 @@ class Logger:
         self.__logger.critical(msg)
 
     def make_pretty(self, msg):
+        if isinstance(msg, str):
+            return msg
         return pprint.pformat(msg)

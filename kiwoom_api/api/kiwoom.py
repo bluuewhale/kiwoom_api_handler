@@ -13,13 +13,14 @@ from kiwoom_api.api._errors import *
 from kiwoom_api.api._logger import Logger
 from kiwoom_api.api._config import *
 from kiwoom_api.utility.utility import removeSign, dictListToListDict, readTxt, saveTxt
-
+from kiwoom_api.api._api_config import DatabaseConfig
+from kiwoom_api.api.mysql import MySql
 
 class Kiwoom(QAxWidget):
     """ 싱글톤 패턴 적용 """
 
     __instance = None
-
+    
     @classmethod
     def __getInstance(cls):
         return cls.__instance
@@ -198,26 +199,36 @@ class Kiwoom(QAxWidget):
         fidList: str
             fidList 구분은 ;(세미콜론) 이다.
         """
-
-        # Logging
-        chejanDetail = {
-            "TIME": dt.now().strftime("%Y%m%d %H:%M%S.%f"),
-            "EVENT": "eventReceiveChejanData",
-            "GUBUN": getattr(ChejanGubun, "TYPE").get(gubun),
+        
+        chejanDict = {
             "BASC_DT": dt.now().strftime("%Y%m%d"),
         }
-
         fids = fidList.split(";")
-        for fid in fids:
-            try:
-                fidName = FidList.CHEJAN.get(fid)
-            except KeyError:
-                continue
 
-            data = self.getChejanData(fid).strip()
-            chejanDetail[fidName] = data
+        if gubun == '0': # 주문접수/주문체결
+            orderStatus = self.getChejanData('913').strip() # 주문상태 "접수" or "체결" or "확인"
 
-        self.logger.debug(chejanDetail)
+            if orderStatus == '체결':
+                table = 'order_executed'
+                fidDict = getattr(FidList, 'EXECUTED')
+                
+                for fid in fids:
+                    fidName = fidDict.get(fid)
+                    if fidName is None:
+                        continue
+                    data = self.getChejanData(fid).strip()
+                    chejanDict[fidName] = data
+                
+                self.logger.debug(chejanDict)
+
+                # DB에 체결내역 저장
+                try:
+                    table = 'order_executed'
+                    config = getattr(DatabaseConfig, 'config')
+                    mysql = MySql(**config)
+                    mysql.insert(table=table, **chejanDict)
+                except Exception as e:
+                    self.logger.error(f'DB CONNECTION ERROR: {e}')       
 
     ###############################################################
     #################### 로그인 관련 메서드   ######################

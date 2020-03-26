@@ -18,7 +18,7 @@ class Executor:
         qty,
         price,
         hogaType,
-        originOrderNo,
+        originOrderNo="",
     ):
         """ 주문정보를 생성하는 매서드,
         생성된 주문정보는 sendOrder() 매서드를 통해 제출 가능
@@ -68,7 +68,7 @@ class Executor:
         qty,
         price,
         hogaType,
-        originOrderNo,
+        originOrderNo="",
     ):
         """ API(kiwoom)를 통해 주문을 제출하는 메서드
         매개변수 설명은 createOrderSpec() 매서드 참고

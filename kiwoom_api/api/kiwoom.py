@@ -208,8 +208,7 @@ class Kiwoom(QAxWidget):
 
         if gubun != '0': # 주문접수/주문체결이 아니면 logging 안함
             return
-
-        table = None # 지정된 table 명이 있으면 json파일 생성
+        
         orderStatus = self.getChejanData('913').strip() # 주문상태 "접수" or "체결" or "확인"
         if orderStatus == '접수':
             table = 'orders_submitted'
@@ -217,8 +216,12 @@ class Kiwoom(QAxWidget):
         elif orderStatus == '체결':
             table = 'orders_executed'
             fidDict = getattr(FidList, 'EXECUTED')
-        elif orderStatus == '주문취소':
-            return
+        elif orderStatus == '확인': #주문취소
+            table = 'orders_cancelled'
+            fidDict = getattr(FidList, 'CANCELLED')
+        else:
+            table = None # 지정된 table 명이 없으면 json파일 생성 안함
+            fidDict = getattr(FidList, 'ALL')
 
         resultDict = {
             "BASC_DT": dt.now().strftime("%Y-%m-%d")
@@ -234,12 +237,13 @@ class Kiwoom(QAxWidget):
 
         # 체결내역은 json으로 임시저장하고, 
         # 비동기 watcher를 지정해서 DB에 쓰는 방식으로 최적화
-        t = dt.now().strftime('%Y%m%d%H%M%S%f')
-        file_path = os.path.join(self.order_log_dir, f'{table}-{t}')
-        try:
-            writeJson(resultDict, file_path)
-        except Exception as e:
-            self.logger.error(f'ERROR: Order JSON logging {e}')
+        if table is not None:
+            t = dt.now().strftime('%Y%m%d%H%M%S%f')
+            file_path = os.path.join(self.order_log_dir, f'{table}-{t}')
+            try:
+                writeJson(resultDict, file_path)
+            except Exception as e:
+                self.logger.error(f'ERROR: Order JSON logging {e}')
             
     ###############################################################
     #################### 로그인 관련 메서드   ######################

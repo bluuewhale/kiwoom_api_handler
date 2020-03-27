@@ -205,12 +205,11 @@ class Kiwoom(QAxWidget):
         fidList: str
             fidList 구분은 ;(세미콜론) 이다.
         """
+
         if gubun != '0': # 주문접수/주문체결이 아니면 logging 안함
             return
 
-        table = None # 지정된 table 명이 있으면 DB에 저장
-        resultDict = {"BASC_DT": dt.now().strftime("%Y-%m-%d")}
-        
+        table = None # 지정된 table 명이 있으면 json파일 생성
         orderStatus = self.getChejanData('913').strip() # 주문상태 "접수" or "체결" or "확인"
         if orderStatus == '접수':
             table = 'orders_submitted'
@@ -221,6 +220,9 @@ class Kiwoom(QAxWidget):
         elif orderStatus == '주문취소':
             return
 
+        resultDict = {
+            "BASC_DT": dt.now().strftime("%Y-%m-%d")
+        }
         fids = fidList.split(";")
         for fid in fids:
             fidName = fidDict.get(fid)

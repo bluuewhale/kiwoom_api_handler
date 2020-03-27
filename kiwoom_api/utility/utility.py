@@ -1,3 +1,13 @@
+import json 
+
+def writeJson(obj, path):
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(json.dumps(obj, ensure_ascii=False, indent='\t'))
+
+def readJson(path):
+    with open(path, 'r', encoding="utf-8") as f:
+        return json.load(f)
+
 def readTxt(path):
     """ read txt from a file """
 

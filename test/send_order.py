@@ -3,7 +3,7 @@ import os
 from pprint import pprint
 import sys
 import unittest
-
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
@@ -38,9 +38,17 @@ class OrderTest(unittest.TestCase):
             hogaType="03",
             originOrderNo="",
         )
-        orderResponse = executor.sendOrder(**orderSpecDict)
 
-        pprint(orderResponse)
+        for _ in range(2):
+            orderResponse = executor.sendOrder(**orderSpecDict)
+            #pprint(orderResponse)
+
+            #print(kiwoom.getServerGubun())
+            
+
+            #time.sleep(5)
+            #print(len(kiwoom.codes))
+            #time.sleep(5)
 
     """ 
     def testSendOrderFail(self):

@@ -1,0 +1,16 @@
+{
+	"BASC_DT": "2020-03-30",
+	"ACCOUNT_NO": "8131214911",
+	"ORDER_NO": "0163427",
+	"TICKER": "A005930",
+	"ORDER_STATUS": "접수",
+	"NAME": "삼성전자",
+	"ORDER_QTY": "1",
+	"ORDER_PRICE": "0",
+	"UNEX_QTY": "1",
+	"ORIGINAL_ORDER_NO": "0000000",
+	"ORDER_GUBUN": "+매수",
+	"HOGA_TYPE": "시장가",
+	"SELL_BUY_GUBUN": "2",
+	"ORDER_TRAN_TIME": "142407"
+}

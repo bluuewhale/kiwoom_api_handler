@@ -1,5 +1,6 @@
 from collections import deque, defaultdict
 from datetime import datetime as dt
+import functools
 import os
 import time
 import signal
@@ -9,7 +10,7 @@ from PyQt5.QAxContainer import QAxWidget
 from PyQt5.QtCore import QEventLoop, QTimer
 
 # from kiwoom_api.utility import *
-from kiwoom_api.api._errors import *
+from kiwoom_api.api.errors import *
 from kiwoom_api.api._logger import Logger
 from kiwoom_api.config.api import *
 from kiwoom_api.utility.utility import *
@@ -50,7 +51,9 @@ class Kiwoom(QAxWidget):
         self.isNext = 0
 
         # logging 클래스
-        self.logger = Logger(name="Kiwoom")
+        home = os.environ.get('HOME')
+        log_path = os.path.join(home, '.kiwoom_log')
+        self.logger = Logger(path=log_path, name="Kiwoom")
 
         # API 요청 제한 관리 Queue (1초 5회, 1시간 1,000회)
         self.requestDelayCheck = APIDelayCheck(logger=self.logger)
@@ -64,15 +67,21 @@ class Kiwoom(QAxWidget):
         self.OnReceiveTrData.connect(self.eventReceiveTrData)
         self.OnReceiveChejanData.connect(self.eventReceiveChejanData)
         self.OnReceiveMsg.connect(self.eventReceiveMsg)
-    
-    @property
-    def order_log_dir(self):
-        try:
-            os.mkdir('./order_log')
-        except FileExistsError:
-            pass
-        return './order_log'
 
+        self.checkThreadTimer = QTimer(self)
+        self.checkThreadTimer.setInterval(1000) #.5 seconds
+        #eventTrigger = functools.partial(self.eventReceiveChejanData, '3', [], 0)
+        #self.checkThreadTimer.timeout.connect(eventTrigger)
+        #self.checkThreadTimer.start()
+
+    @property
+    def order_log_path(self):
+        home_path = os.environ.get('HOME')
+        path = os.path.join(home_path, '.kiwoom_order_log')
+        if not os.path.exists(path):
+            os.mkdir(path)
+        return path
+        
     ###############################################################
     ################### 이벤트 발생 시 메서드   #####################
     ###############################################################
@@ -149,19 +158,14 @@ class Kiwoom(QAxWidget):
 
         # 주문 이벤트인 경우
         if "ORD" in trCode:
-
             # 주문번호 획득, 주문번호가 존재하면 주문 성공
             orderNo = self.getCommData(trCode, "", 0, "주문번호")
             self.orderResponse.update({"orderNo": orderNo})
-
-            # orderLoop 탈출
             try:
                 self.orderLoop.exit()
             except AttributeError:
                 pass
-            finally:
-                self.logger.debug(self.orderResponse)
-                return
+            return
 
         # TR 이벤트인 경우, orderResponse를 삭제
         if hasattr(self, "orderResponse"):
@@ -205,7 +209,6 @@ class Kiwoom(QAxWidget):
         fidList: str
             fidList 구분은 ;(세미콜론) 이다.
         """
-
         if gubun != '0': # 주문접수/주문체결이 아니면 logging 안함
             return
         
@@ -235,16 +238,17 @@ class Kiwoom(QAxWidget):
             resultDict[fidName] = data
         self.logger.debug(resultDict)
 
+        
         # 체결내역은 json으로 임시저장하고, 
         # 비동기 watcher를 지정해서 DB에 쓰는 방식으로 최적화
         if table is not None:
             t = dt.now().strftime('%Y%m%d%H%M%S%f')
-            file_path = os.path.join(self.order_log_dir, f'{table}-{t}')
+            file_path = os.path.join(self.order_log_path, f'{table}-{t}')
             try:
                 writeJson(resultDict, file_path)
             except Exception as e:
                 self.logger.error(f'ERROR: Order JSON logging {e}')
-            
+        
     ###############################################################
     #################### 로그인 관련 메서드   ######################
     ###############################################################
@@ -692,7 +696,7 @@ class Kiwoom(QAxWidget):
 
         # eventReceiveTrData() 에서 루프종료 or timeout
         self.orderLoop = QEventLoop()
-        QTimer.singleShot(1000, self.orderLoop.exit)  # timout in 1000 ms
+        #QTimer.singleShot(1000, self.orderLoop.exit)  # timout in 1000 ms
         self.orderLoop.exec_()
 
     def getChejanData(self, fid):
@@ -718,13 +722,10 @@ class Kiwoom(QAxWidget):
     def __getData(self, trCode, rqName):
 
         returnDict = {}
-
         if getattr(TRKeys, trCode).get("멀티데이터", False):
             returnDict["멀티데이터"] = self.__getMultiData(trCode, rqName)
-
         if getattr(TRKeys, trCode).get("싱글데이터", False):
             returnDict["싱글데이터"] = self.__getSingleData(trCode, rqName)
-
         return returnDict
 
     def __getSingleData(self, trCode, rqName):
@@ -733,32 +734,26 @@ class Kiwoom(QAxWidget):
 
         keyList = getattr(TRKeys, trCode).get("싱글데이터")
         for key in keyList:
-
             val = self.getCommData(trCode, rqName, 0, key)
             if key.endswith("호가") or key in getattr(TRKeys, "NOSIGNKEY"):
                 val = removeSign(val)
             data[key] = val
-
         return data
 
     def __getMultiData(self, trCode, rqName):
 
         data = []
-
         cnt = self.getRepeatCnt(trCode, rqName)
         keyList = getattr(TRKeys, trCode).get("멀티데이터")
 
         for i in range(cnt):
             tmpDict = {}
-
             for key in keyList:
-
                 val = self.getCommData(trCode, rqName, i, key)
                 if key.endswith("호가") or key in getattr(TRKeys, "NOSIGNKEY"):
                     val = removeSign(val)
                 tmpDict[key] = val
             data.append(tmpDict)
-
         return data
 
     def __getOPTKWFID(self, trCode, rqName):
@@ -769,12 +764,9 @@ class Kiwoom(QAxWidget):
         keyList = getattr(TRKeys, trCode).get("멀티데이터")
 
         for key, ls in zip(keyList, zip(*tmpData)):
-
             if key.endswith("호가") or key in getattr(TRKeys, "NOSIGNKEY"):
                 ls = map(removeSign, ls)
-
             data[key] = list(ls)
-
         data = dictListToListDict(data)  # dict of list to list of dict
         data = {"멀티데이터": data}
         return data

@@ -51,9 +51,8 @@ class Kiwoom(QAxWidget):
         self.isNext = 0
 
         # logging 클래스
-        home = os.environ.get('HOME')
-        log_path = os.path.join(home, '.kiwoom_log')
-        self.logger = Logger(path=log_path, name="Kiwoom")
+        self.homepath = os.environ.get('userprofile')
+        self.logger = Logger(path=self.log_path, name="Kiwoom")
 
         # API 요청 제한 관리 Queue (1초 5회, 1시간 1,000회)
         self.requestDelayCheck = APIDelayCheck(logger=self.logger)
@@ -68,16 +67,16 @@ class Kiwoom(QAxWidget):
         self.OnReceiveChejanData.connect(self.eventReceiveChejanData)
         self.OnReceiveMsg.connect(self.eventReceiveMsg)
 
-        self.checkThreadTimer = QTimer(self)
-        self.checkThreadTimer.setInterval(1000) #.5 seconds
-        #eventTrigger = functools.partial(self.eventReceiveChejanData, '3', [], 0)
-        #self.checkThreadTimer.timeout.connect(eventTrigger)
-        #self.checkThreadTimer.start()
-
+    @property
+    def log_path(self):
+        path = os.path.join(self.homepath, '.kiwoom_log')
+        if not os.path.exists(path):
+            os.mkdir(path)
+        return path
+    
     @property
     def order_log_path(self):
-        home_path = os.environ.get('HOME')
-        path = os.path.join(home_path, '.kiwoom_order_log')
+        path = os.path.join(self.homepath, '.kiwoom_order_log')
         if not os.path.exists(path):
             os.mkdir(path)
         return path

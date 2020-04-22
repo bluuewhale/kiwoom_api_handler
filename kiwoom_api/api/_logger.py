@@ -4,13 +4,15 @@ import logging
 import logging.handlers
 import os
 import pprint
+import queue
 
 
 class Logger:
-    def __init__(self, name, streamHandler=True):
+    def __init__(self, path, name=""):
+        self.propagate = 0
+        self.makeLogFolder(path)
 
-        self.makeFolder()
-        filePath = "log/{}.txt".format(dt.now().strftime("%Y%m%d"))
+        filePath = "{}/{}.txt".format(path, dt.now().strftime("%Y%m%d"))
 
         # 로깅용 설정파일
         self.__logger = logging.getLogger(name)
@@ -19,15 +21,19 @@ class Logger:
         fileHandler = logging.FileHandler(filePath)
         self.__logger.addHandler(fileHandler)
 
-        if streamHandler:
-            streamHandler = logging.StreamHandler()
-            self.__logger.addHandler(streamHandler)
+        streamHandler = logging.StreamHandler()
+        self.__logger.addHandler(streamHandler)
 
-    def makeFolder(self):
-        try:
-            os.mkdir("log")
-        except FileExistsError:
-            pass
+        #log_que = queue.Queue(-1)
+        #queueListener = logging.handlers.QueueListener(log_que, streamHandler, fileHandler, streamHandler)
+        #queueListener.start()
+
+        #queueHandler = logging.handlers.QueueHandler(log_que)
+        #self.__logger.addHandler(queueHandler)
+
+    def makeLogFolder(self, path):
+        if not os.path.exists(path):
+            os.mkdir(path)
 
     def debug(self, msg, pretty=True):
         if pretty:

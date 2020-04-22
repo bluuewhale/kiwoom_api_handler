@@ -3,8 +3,7 @@ from functools import wraps
 import os
 from pprint import pprint
 import sys
-
-sys.path.insert(0, r"C:\Users\koko8\Documents\git-project\kiwoom_api")
+import time
 import unittest
 
 from PyQt5.QtWidgets import QApplication
@@ -16,7 +15,7 @@ def initQt(func):
     @wraps(func)
     def inner(self, *args, **kwargs):
         app = QApplication(sys.argv)
-        kiwoom = Kiwoom.instance()
+        kiwoom = Kiwoom()
         kiwoom.commConnect()
         self.feeder = DataFeeder(kiwoom)
 
@@ -30,7 +29,7 @@ class TestDataFeeder(unittest.TestCase):
         self.feeder = None
         self.date = "20200312"
         self.code = "005930"
-
+        time.sleep(3)
     #! TODO: 유닛테스트 코드 작성
 
     @initQt
@@ -183,7 +182,7 @@ class TestDataFeeder(unittest.TestCase):
 
         market = "0"
         data = self.feeder.getCodeListByMarket(market)
-        pprint(data)
+        #pprint(data[:10])
 
     @initQt
     def testGetMasterCodeName(self):

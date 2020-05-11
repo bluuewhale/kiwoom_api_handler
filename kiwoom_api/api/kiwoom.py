@@ -12,7 +12,7 @@ from PyQt5.QtCore import QEventLoop, QTimer
 # from kiwoom_api.utility import *
 from kiwoom_api.api.errors import *
 from kiwoom_api.api._logger import Logger
-from kiwoom_api.config.api import *
+from kiwoom_api.api.return_codes import *
 from kiwoom_api.utility.utility import *
 
 class Kiwoom(QAxWidget):

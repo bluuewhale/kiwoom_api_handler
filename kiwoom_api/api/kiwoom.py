@@ -274,8 +274,9 @@ class Kiwoom(QAxWidget):
         return self.dynamicCall("GetConnectState()")
 
     @property
-    def accNo(self):
-        return self.getLoginInfo("ACCNO").rstrip(";")
+    def accNos(self):
+        accounts = self.getLoginInfo("ACCNO").rstrip(";")
+        return accounts.split(";")
 
     def getLoginInfo(self, tag):
         """ 사용자의 tag에 해당하는 정보를 반환한다.
@@ -346,7 +347,7 @@ class Kiwoom(QAxWidget):
         if not isinstance(value, str):
             value = str(value)
 
-        if (key == "계좌번호") and (value != self.accNo):
+        if (key == "계좌번호") and (value not in self.accNos):
             raise KiwoomProcessingError("ERROR: Invalid 계좌번호")
 
         if (key == "종목코드") and (value not in self.codes):

@@ -4,8 +4,8 @@ import os
 
 import pandas as pd
 
-from kiwoom_api.api.errors import *
-from kiwoom_api.api.return_codes import *
+from .errors import KiwoomConnectError, ParameterTypeError, ParameterValueError
+from .return_codes import TRName
 
 
 class DataFeeder:

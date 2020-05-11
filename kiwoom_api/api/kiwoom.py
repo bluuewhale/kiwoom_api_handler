@@ -9,11 +9,12 @@ import pandas as pd
 from PyQt5.QAxContainer import QAxWidget
 from PyQt5.QtCore import QEventLoop, QTimer
 
-# from kiwoom_api.utility import *
-from kiwoom_api.api.errors import *
-from kiwoom_api.api._logger import Logger
-from kiwoom_api.api.return_codes import *
-from kiwoom_api.utility.utility import *
+from ..utility.utility import dictListToListDict, removeSign, writeJson
+from ._logger import Logger
+from .errors import (KiwoomConnectError, KiwoomProcessingError,
+                     ParameterTypeError, ParameterValueError)
+from .return_codes import FidList, ReturnCode, TRKeys
+
 
 class Kiwoom(QAxWidget):
     """ 싱글톤 패턴 적용 """

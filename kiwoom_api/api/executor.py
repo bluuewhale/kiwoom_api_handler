@@ -1,7 +1,7 @@
 import os
 import sys
 
-from kiwoom_api.api.errors import ParameterTypeError
+from .errors import ParameterTypeError
 
 
 class Executor:

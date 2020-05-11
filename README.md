@@ -70,7 +70,7 @@ TR과 관련된 자세한 사항은 [키움증권 공식 OPEN API+ 개발
 ```python
 import sys
 from PyQt5.QtWidgets import QApplication
-from kiwoom_api.api import Kiwoom, DataFeeder
+from kiwoom_api_handler import Kiwoom, DataFeeder
 
 if __name__ == "__main__":
 
@@ -117,7 +117,7 @@ if __name__ == "__main__":
 ```python
 import sys
 from PyQt5.QtWidgets import QApplication
-from kiwoom_api_handler.api import Kiwoom, DataFeeder, Executor
+from kiwoom_api_handler import Kiwoom, DataFeeder, Executor
 
 if __name__ == "__main__":
 

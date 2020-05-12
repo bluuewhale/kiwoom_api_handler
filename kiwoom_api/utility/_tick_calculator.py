@@ -53,8 +53,6 @@ class TickCaculator:
         tickInvertalList = self.tickIntervalDict[market]
 
         idx = tickInvertalList.index(price)
-
-        newIdx = idx + k
+        newIdx = idx + tickShift
         newPrice = tickInvertalList[newIdx]
-
         return newPrice

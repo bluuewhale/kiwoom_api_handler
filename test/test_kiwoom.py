@@ -42,6 +42,8 @@ class TestKiwoom(unittest.TestCase):
         print(a.connectState)
         print(b.connectState)
 
+        print(a.accNo)
 
 if __name__ == "__main__":
     unittest.main()
+    

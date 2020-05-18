@@ -275,7 +275,12 @@ class Kiwoom(QAxWidget):
 
     @property
     def accNo(self):
-        return self.getLoginInfo("ACCNO").rstrip(";")
+        '''
+        Returns
+        ----------
+        list
+        '''
+        return self.getLoginInfo("ACCNO").split(";")
 
     def getLoginInfo(self, tag):
         """ 사용자의 tag에 해당하는 정보를 반환한다.

@@ -4,7 +4,7 @@ import os
 
 import pandas as pd
 
-from .errors import KiwoomConnectError, ParameterTypeError, ParameterValueError
+from .errors import KiwoomConnectError, ParameterTypeError, ParameterValueError, KiwoomTrNotSupported
 from .return_codes import TRName
 
 
@@ -29,7 +29,11 @@ class DataFeeder:
         for k, v in kwargs.items():
             self.kiwoom.setInputValue(k, v)
 
-        trName = getattr(TRName, trCode)
+        try:
+            trName = getattr(TRName, trCode)
+        except  AttributeError:
+            raise KiwoomTrNotSupported()
+
         self.kiwoom.commRqData(trName, trCode, 0, "0000")
         return getattr(self.kiwoom, trCode)
 

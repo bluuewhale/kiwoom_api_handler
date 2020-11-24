@@ -13,7 +13,7 @@ or
 
 ``` sh
 # You can check the latest sources with the command
-git clone git clone https://github.com/DonghyungKo/kiwoom_api_handler.git
+git clone https://github.com/DonghyungKo/kiwoom_api_handler.git
 ```
 
 ### Requirements
@@ -105,9 +105,6 @@ if __name__ == "__main__":
             "codeCount": 2, # 종목코드 갯수
     }
     data = feeder.request(**params)
-
-
----
 
 ### kiwoom_api.api.Executor
 

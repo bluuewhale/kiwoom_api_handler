@@ -30,7 +30,6 @@ class KiwoomProcessingError(Exception):
     def __repr__(self):
         return self.msg
 
-
 class KiwoomConnectError(Exception):
     """ 키움서버에 로그인 상태가 아닐 경우 발생하는 예외 """
 
@@ -39,3 +38,6 @@ class KiwoomConnectError(Exception):
 
     def __str__(self):
         return self.msg
+
+class KiwoomTrNotSupported(Exception):
+    pass
